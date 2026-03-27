@@ -1,26 +1,4 @@
-# Water Engine
-The goal of this project is to create a small mesh/material viewer that also includes realistically rendered water. This engine is implemented using [physically based rendering](https://en.wikipedia.org/wiki/Physically_based_rendering) and IBL. 
-Meshes and/or materials will be viewable above an ocean-like plane with waves simulated using FFT, in addition to IBL and ray-traced reflections of the viewed mesh.
+# 3DGS
+The goal of this project is to create a tool that can render pretrained 3DGS (3D Gaussian Splatting) models. This is a fork of my "water engine" project, which is a more general material viewer that will include FFT water rendering and state-of-the-art rendering techniques.
 
-Additionally, I'm looking to add rendering techniques like:
-- Parallax occlusion mapping & self-shadowing
-- Shadow mapping
-- DLSS/DLAA
-- Anything else that's often found in modern engines
-
-It will be built off of the water shading logic I wrote [here](https://www.poshbrolly.net/shader/l0Ty1LFCvmCia8MqWn7C), but improved.
-
-The overall goal is to learn as much as possible. lesgo
-
-# Showcase
-## 02-26-2026
-- Got parallax mapping supposedly working, though it's difficult to tell
-- Next is POM (Parallax Occlusion Mapping, uses raymarching)
-
-https://github.com/user-attachments/assets/030e10a9-6f3d-42c9-b2c7-9b88df5e5bbf
-
-## 02-25-2026
-- Just got normal mapping working fully
-- Next is either parallax mapping or IBL
-![stones](./showcase/stones.png)
-![overhead_bump](./showcase/overhead_bump.png)
+The stack of this project is C++ and OpenGL
