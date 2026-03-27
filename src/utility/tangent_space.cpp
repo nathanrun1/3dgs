@@ -29,8 +29,6 @@ glm::mat2x3 _tangent_basis(const Vertex& v1, const Vertex& v2, const Vertex& v3)
     // -> [T, B]^T = [DUV1, DUV2]^T^-1 * [E1, E2]^T
     // That is, [T, B] transforms from tangent space to world space.
     glm::mat2x3 TB = edges * glm::inverse(delta_uv);
-    std::cout << "Calculating tangent space for: " << v1.position << ", " << v2.position << ", " << v3.position << '\n';
-    std::cout << "\t" << TB << std::endl;
     return TB;
 }
 
@@ -42,12 +40,11 @@ float _get_bitangent_sign(const glm::mat2x3& tangent_basis, const glm::vec3& nor
 
     float result = glm::dot(glm::cross(tangent_basis[0], normal), tangent_basis[1]) > 0.0 ? 1.0 : -1.0;
     glm::vec3 cross = glm::cross(tangent_basis[0], normal);
-    std::cout << "Sign with basis " << tangent_basis << " and normal " << normal << "?:\n" << result << std::endl;
     return result;
 }
 
 /** 
- * Updates the vertex's tangent (and invert_bitangent attribute) based on total amount of tangents calculated and most newly calculated tangent.
+ * Updates the vertex's tangent (and invert_bitangent attribute) based on total amount of tangents calculated and most recently calculated tangent.
  * Uses the .w component of the newly calculated tangent.
  * 
  * @details accounts for shared vertices between triangles, interpolating the tangent calculations from each one.
@@ -61,8 +58,6 @@ void _update_tangent(Vertex& v, unsigned int num_tangents, const glm::vec4& tang
 }
 
 void calculate_tangents(const std::span<Vertex>& vertices, const std::span<unsigned int>& indices) {
-    // map index to how many tangents calculated per
-    // if >0, then do incremental average for that vertex's tangent
     std::unordered_map<unsigned int, size_t> tangents_calculated{};
     for (int i = 0; i < indices.size(); i += 3) {
         glm::mat2x3 basis = _tangent_basis(
@@ -74,7 +69,6 @@ void calculate_tangents(const std::span<Vertex>& vertices, const std::span<unsig
             Vertex& v = vertices[indices[j]];
             unsigned int num_tangents = ++tangents_calculated[indices[j]];
             glm::vec4 tangent = glm::vec4(basis[0], _get_bitangent_sign(basis, v.normal));  // w component contains handedness sign
-            std::cout << tangent << std::endl;
             _update_tangent(v, num_tangents, tangent);
         }
     }

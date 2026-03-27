@@ -17,8 +17,9 @@ namespace Assets {
     std::vector<std::byte> g_texture2d_data;
     std::vector<Texture2DRange> g_texture2d_ranges;
     
-    /* Saves and creates Texture2D instance with given data and dimensions. Scales data to meet width/height dimensions
-     * by looping.
+    /**
+     * Saves and creates Texture2D instance with given data and dimensions. Scales data to meet width/height dimensions
+     * by looping (1-dimensionally)
      */
     Texture2D _save_texture2d(const std::vector<std::byte>& tex_data, const int width, const int height, const int n_channels) {
         const Texture2D new_texture2d(
@@ -56,7 +57,7 @@ namespace Assets {
         auto raw = reinterpret_cast<std::byte*>(stbi_load(texture_path.c_str(), &width, &height, &n_channels, 0));
         if (!raw) {
             stbi_image_free(raw);
-            throw texture_error("Failed to load texture: " + texture_path);
+            throw texture_error("Failed to load texture (data is invalid): " + texture_path);
         }
         
         std::vector tex_data(raw, raw + width * height * n_channels);
