@@ -17,6 +17,9 @@ namespace Renderer {
 
     /** Draws the given mesh */
     void draw_mesh(const Assets::Mesh& mesh, const Transform& transform, const Assets::Material& material);
+    
+    /** Draws the given points */
+    void draw_points(const std::vector<glm::vec3>& points);
 
     /** Creates shader program from given shaders and adds it to available program list */
     void create_program(const std::string& program_id, const ShaderProgramInfo &program_info);
@@ -26,3 +29,8 @@ namespace Renderer {
 }
 
 #endif //WATERENGINE_RENDERER_H
+
+
+// TODO
+// - Render a set of points
+// - Retrieve a set of points from python that represents some gaussian splat defined by a covariance matrix

@@ -23,6 +23,9 @@ namespace Renderer {
     unsigned int g_meshVAO;
     unsigned int g_meshVBO;
     unsigned int g_meshEBO;
+    
+    unsigned int g_pointsVAO;
+    unsigned int g_pointsVBO;
 
     unsigned int g_material_map_array;
 
@@ -60,8 +63,8 @@ namespace Renderer {
         glViewport(0, 0, width, height);
     }
 
-    /* Initializes model data VAO, VBO and EBO */
-    void _init_model_buffers() {
+    /** Initializes model data VAO, VBO and EBO */
+    void _setup_models() {
         glGenVertexArrays(1, &g_meshVAO);
         glBindVertexArray(g_meshVAO);
 
@@ -75,6 +78,19 @@ namespace Renderer {
             glVertexAttribPointer(desc.index, desc.size, desc.type, GL_FALSE, sizeof(Vertex), (void*)desc.offset);
             glEnableVertexAttribArray(desc.index);
         }
+    }
+    
+    /** Initializes point data VAO & VBO */
+    void _setup_points() {
+        glGenVertexArrays(1, &g_pointsVAO);
+        glBindVertexArray(g_pointsVAO);
+        
+        glGenBuffers(1, &g_pointsVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, g_pointsVBO);
+        
+        // Position is only attribute at index 0
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+        glEnableVertexAttribArray(0);
     }
 
     /* Load model data into currently bound VBO and EBO */
@@ -157,8 +173,10 @@ namespace Renderer {
         use_program(program_id);
 
         GLFW::add_frame_buffer_size_callback(_frame_buffer_size_callback);
-
-        _init_model_buffers();
+        
+        _setup_points();
+        
+        _setup_models();
         _load_models();
 
         _init_textures();
@@ -179,6 +197,8 @@ namespace Renderer {
 
         g_activeProgram->set_mat4("uVP", World::get_main_camera().get_vp_matrix());
         g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        
+        glPointSize(5.0f);
     }
 
     void draw_mesh(const Assets::Mesh& mesh, const Transform& transform, const Assets::Material& material) {
@@ -190,9 +210,19 @@ namespace Renderer {
 
         glDrawElements(GL_TRIANGLES, modelIndices.size(), GL_UNSIGNED_INT, reinterpret_cast<void *>(indicesOffset));
     }
+    
+    void draw_points(const std::vector<glm::vec3>& points) {
+        g_activeProgram->set_mat4("uModel", glm::identity<glm::mat4>());
+        
+        glBindVertexArray(g_pointsVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, g_pointsVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * points.size(), points.data(), GL_DYNAMIC_DRAW);
+        
+        glDrawArrays(GL_POINTS, 0, points.size());
+    }
 
     void create_program(const std::string &program_id, const ShaderProgramInfo &program_info) {
-        g_availablePrograms.insert_or_assign(program_id, std::move(ShaderProgram{program_info}));
+        g_availablePrograms.insert_or_assign(program_id, ShaderProgram{program_info});
     }
 
     void use_program(const std::string &program_id) {

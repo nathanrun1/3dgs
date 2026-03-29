@@ -1,8 +1,12 @@
-﻿#include <iostream>
+﻿#include <fstream>
+#include <iostream>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <nlohmann/json.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/io.hpp>
 
 #include "renderer/renderer.h"
 #include "backend/glfw_backend.h"
@@ -15,15 +19,9 @@
 #include "world/update_registry.h"
 #include "world/world.h"
 
-// TO IMPLEMENT:
-// - Load from .obj
-// X Geometry batching
-//   - Vertex deduplication
-// - Instancing
-
 using namespace Input;
 
-Vertex cubeVertices[] = {
+Vertex cube_vertices[] = {
     {{-0.5f, -0.5f, -0.5f,}, {0.0f, 0.0f},  { 0.0f,  0.0f, -1.0f}},
     {{ 0.5f, -0.5f, -0.5f,}, {1.0f, 0.0f,}, { 0.0f,  0.0f, -1.0f}},
     {{ 0.5f,  0.5f, -0.5f,}, {1.0f, 1.0f,}, { 0.0f,  0.0f, -1.0f}},
@@ -73,11 +71,11 @@ Vertex cubeVertices[] = {
     {{-0.5f,  0.5f, -0.5f},  { 0.0f, 1.0f}, { 0.0f,  1.0f,  0.0f}}
 };
 
-unsigned int cubeIndices[] = {
+unsigned int cube_indices[] = {
      0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35
 };
 
-glm::vec3 cubePositions[] = {
+glm::vec3 cube_positions[] = {
     glm::vec3( 0.0f,  0.0f,  0.0f),
     glm::vec3( 2.0f,  5.0f, -15.0f),
     glm::vec3(-1.5f, -2.2f, -2.5f),
@@ -105,7 +103,7 @@ void key_callback(Key key, Action action) {
         hot_reload({
         Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
         Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag")
-    });
+        });
     }
 }
 
@@ -114,7 +112,24 @@ void mouse_callback(MouseButton mouse_button, Action action) {
         Input::set_cursor_mode(CursorMode::GAME);
 }
 
+/** Loads points from the given JSON file, assuming the JSON file contains only an array of 3-element float arrays */
+std::vector<glm::vec3> load_points(const std::string& json_file) {
+    std::ifstream f{json_file};
+    nlohmann::json data = nlohmann::json::parse(f);
+    
+    std::cout << data.size() << std::endl;
+    
+    std::vector<glm::vec3> points{};
+    for (const nlohmann::json& p : data) {
+        points.emplace_back((float)p[0], (float)p[1], (float)p[2]);
+    }
+    
+    return points;
+}
+
 int main() {
+    std::vector<glm::vec3> points = load_points("res/data/samples.json");
+    
     GLFW::set_window_width(1600);
     GLFW::set_window_height(1200);
     GLFW::init();
@@ -128,8 +143,8 @@ int main() {
     Input::append_mouse_button_callback(mouse_callback);
 
     // Assets
-    std::vector vertices(std::begin(cubeVertices), std::end(cubeVertices));
-    std::vector indices(std::begin(cubeIndices), std::end(cubeIndices));
+    std::vector vertices(std::begin(cube_vertices), std::end(cube_vertices));
+    std::vector indices(std::begin(cube_indices), std::end(cube_indices));
     calculate_tangents(vertices, indices);
     Assets::Mesh cube = Assets::create_mesh(vertices, indices);
 
@@ -175,10 +190,12 @@ int main() {
         Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
         Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag")
     };
-    Renderer::create_program("basic", sp_info);
+    Renderer::create_program("default", sp_info);
 
     World::init();
-    Renderer::init("basic");
+    Renderer::init("default");
+    
+    std::cout << "check" << std::endl;
     
     while (!GLFW::window_should_close()) {
         Renderer::begin_draw();
@@ -189,20 +206,22 @@ int main() {
         ImGui::ShowDemoWindow();
         World::UpdateRegistry::run_all_callbacks();
 
-        // Draw containers
-        for (glm::vec3& pos : cubePositions) {
-            Transform transform;
-            transform.position = pos;
-            //transform.set_euler_angles(0.0f, glfwGetTime() * glm::radians(90.0f), 0.0f);
-            transform.scale = {2.0f, 1.0f, 2.0f};
-            Renderer::draw_mesh(cube, transform, stones_material);
-        }
-
-        // Draw light object
-        Transform light_transform;
-        light_transform.position = light_pos;
-        light_transform.scale = glm::vec3(0.5f);
-        Renderer::draw_mesh(cube, light_transform, light_material);
+        // // Draw containers
+        // for (glm::vec3& pos : cubePositions) {
+        //     Transform transform;
+        //     transform.position = pos;
+        //     //transform.set_euler_angles(0.0f, glfwGetTime() * glm::radians(90.0f), 0.0f);
+        //     transform.scale = {2.0f, 1.0f, 2.0f};
+        //     Renderer::draw_mesh(cube, transform, stones_material);
+        // }
+        //
+        // // Draw light object
+        // Transform light_transform;
+        // light_transform.position = light_pos;
+        // light_transform.scale = glm::vec3(0.5f);
+        // Renderer::draw_mesh(cube, light_transform, light_material);
+        
+        Renderer::draw_points(points);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

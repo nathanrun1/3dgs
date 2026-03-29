@@ -10,27 +10,27 @@ file(GLOB_RECURSE LOCAL_SRC CONFIGURE_DEPENDS
         src/assets/meshes.cpp
         src/assets/materials.cpp
         src/assets/texture2ds.cpp
-        
+
         src/backend/glfw_backend.cpp
         src/backend/glfw_input.cpp
         src/backend/glfw_enums.h
-        
+
         src/input/input.cpp
         src/input/enums.h
-        
+
         src/renderer/renderer.cpp
         src/renderer/shader_program.cpp
         src/deprecated/texture2d.cpp
-        
+
         src/world/camera/camera.cpp
         src/world/transform.cpp
         src/world/update_registry.cpp
         src/world/world.cpp
         src/world/lighting.cpp
-        
+
         src/main.cpp
 )
-file(GLOB IMGUI_SRC CONFIGURE_DEPENDS 
+file(GLOB IMGUI_SRC CONFIGURE_DEPENDS
         "deps/imgui/imgui.cpp"
         "deps/imgui/imgui_demo.cpp"
         "deps/imgui/imgui_draw.cpp"
@@ -44,7 +44,7 @@ file(GLOB IMGUI_SRC CONFIGURE_DEPENDS
 
 add_executable(waterengine
         deps/glad/src/glad.c
-        
+
         ${IMGUI_SRC}
         ${LOCAL_SRC}
         src/assets/material_flags.h
@@ -55,6 +55,16 @@ add_executable(waterengine
         src/utility/config/config.cpp
 )
 
-target_include_directories(waterengine PUBLIC src deps/glfw/include deps/glad/include deps/glm deps/stb deps/spdlog/include deps/imgui deps/simpleini)
+target_include_directories(waterengine PUBLIC 
+        src 
+        deps/glfw/include 
+        deps/glad/include 
+        deps/glm 
+        deps/stb 
+        deps/spdlog/include 
+        deps/imgui 
+        deps/simpleini
+        deps/nlohmann/single_include
+)
 target_link_libraries(waterengine glfw ${GLFW_LIBRARIES} SimpleIni::SimpleIni)
 set_target_properties(waterengine PROPERTIES DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

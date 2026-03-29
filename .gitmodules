@@ -13,3 +13,6 @@
 [submodule "deps/simpleini"]
 	path = deps/simpleini
 	url = git@github.com:brofield/simpleini.git
+[submodule "deps/nlohmann"]
+	path = deps/nlohmann
+	url = git@github.com:nlohmann/json.git
