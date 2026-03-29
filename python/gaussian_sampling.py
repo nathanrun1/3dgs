@@ -5,7 +5,7 @@ mean = [0, 0, 0]
 cov = [[1, 0, 0],
        [0, 1, 0],
        [0, 0, 1]]
-N = 1000
+N = 10000
 
 samples = np.random.multivariate_normal(mean, cov, N)
 
