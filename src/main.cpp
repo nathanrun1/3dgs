@@ -88,6 +88,15 @@ glm::vec3 cube_positions[] = {
     glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
+std::vector<glm::vec3> fullscreen_quad = {
+    glm::vec3(-1.0f,  1.0f, 0.0f),
+    glm::vec3(-1.0f, -1.0f, 0.0f),
+    glm::vec3( 1.0f, -1.0f, 0.0f),
+    glm::vec3(-1.0f,  1.0f, 0.0f),
+    glm::vec3( 1.0f, -1.0f, 0.0f),
+    glm::vec3( 1.0f,  1.0f, 0.0f),
+};
+
 /** Re-initializes the renderer with the given shader program */
 void hot_reload(const ShaderProgramInfo& sp_info) {
     std::cout << "Reloading..." << std::endl;
@@ -221,7 +230,8 @@ int main() {
         // light_transform.scale = glm::vec3(0.5f);
         // Renderer::draw_mesh(cube, light_transform, light_material);
         
-        Renderer::draw_points(points);
+        //Renderer::draw_vertices(points, true);
+        Renderer::draw_vertices(fullscreen_quad);
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

@@ -32,18 +32,6 @@ namespace Renderer {
     unsigned int g_lightingUBO;
     unsigned int g_materialUBO;
 
-    std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f}},
-        {{ 0.5f, -0.5f, 0.0f}, {1.0f, 0.0f}},
-        {{-0.5f,  0.5f, 0.0f}, {0.0f, 1.0f}},
-        {{ 0.5f,  0.5f, 0.0f}, {1.0f, 1.0f}}
-    };
-
-    std::vector<unsigned int> indices = {
-        2, 0, 1,
-        2, 1, 3
-    };
-
 
     unsigned int _texture_format(const int n_channels) {
         switch (n_channels) {
@@ -197,6 +185,7 @@ namespace Renderer {
 
         g_activeProgram->set_mat4("uVP", World::get_main_camera().get_vp_matrix());
         g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        g_activeProgram->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
         
         glPointSize(5.0f);
     }
@@ -210,15 +199,16 @@ namespace Renderer {
 
         glDrawElements(GL_TRIANGLES, modelIndices.size(), GL_UNSIGNED_INT, reinterpret_cast<void *>(indicesOffset));
     }
-    
-    void draw_points(const std::vector<glm::vec3>& points) {
+
+    void draw_vertices(const std::vector<glm::vec3>& vertices, bool as_points) {
         g_activeProgram->set_mat4("uModel", glm::identity<glm::mat4>());
         
         glBindVertexArray(g_pointsVAO);
         glBindBuffer(GL_ARRAY_BUFFER, g_pointsVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * points.size(), points.data(), GL_DYNAMIC_DRAW);
-        
-        glDrawArrays(GL_POINTS, 0, points.size());
+        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
+
+        GLuint draw_mode = as_points ? GL_POINTS : GL_TRIANGLES;
+        glDrawArrays(draw_mode, 0, vertices.size());
     }
 
     void create_program(const std::string &program_id, const ShaderProgramInfo &program_info) {

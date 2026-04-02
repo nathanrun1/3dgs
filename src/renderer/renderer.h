@@ -18,8 +18,8 @@ namespace Renderer {
     /** Draws the given mesh */
     void draw_mesh(const Assets::Mesh& mesh, const Transform& transform, const Assets::Material& material);
     
-    /** Draws the given points */
-    void draw_points(const std::vector<glm::vec3>& points);
+    /** Draws the given vertices */
+    void draw_vertices(const std::vector<glm::vec3>& vertices, bool as_points = false);
 
     /** Creates shader program from given shaders and adds it to available program list */
     void create_program(const std::string& program_id, const ShaderProgramInfo &program_info);
