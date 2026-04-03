@@ -1,15 +1,15 @@
-﻿ply
+ply
 format ascii 1.0
 element splat 1
 property float x
 property float y
 property float z
+property float r_0
 property float r_1
 property float r_2
 property float r_3
-property float r_4
+property float s_0
 property float s_1
 property float s_2
-property float s_3
-property float opacity
 end_header
+0 0 0 -0.5 -7.85046215906393585e-17 -0.5 0.70710676908493042 -6.07106781005859375 1 8.07106781005859375

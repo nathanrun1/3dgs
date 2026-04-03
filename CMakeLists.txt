@@ -53,6 +53,7 @@ add_executable(waterengine
         src/utility/tangent_space.cpp
         src/utility/config/config.h
         src/utility/config/config.cpp
+        deps/stb/stb_include.h
 )
 
 target_include_directories(waterengine PUBLIC 
@@ -65,6 +66,7 @@ target_include_directories(waterengine PUBLIC
         deps/imgui 
         deps/simpleini
         deps/nlohmann/single_include
+        deps/happly
 )
 target_link_libraries(waterengine glfw ${GLFW_LIBRARIES} SimpleIni::SimpleIni)
 set_target_properties(waterengine PROPERTIES DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

@@ -1,14 +1,36 @@
 ﻿import numpy as np
 import json
+from plyfile import PlyData, PlyElement
+
+from scipy.spatial.transform import Rotation as R
 
 mean = [0, 0, 0]
-cov = [[1, 0, 0],
-       [0, 1, 0],
-       [0, 0, 1]]
+cov = [[1, 5, 0],
+       [5, 1, 5],
+       [0, 5, 1]]
 N = 10000
 
 samples = np.random.multivariate_normal(mean, cov, N)
 
-with open("res/data/samples.json", "w") as f:
+with open("../res/data/samples.json", "w") as f:
     f.write(json.dumps(samples.tolist(), indent=4))
 
+def _diagonalize(matrix):
+    """Diagonalizes the given matrix as M = PDP^-1, returns P, D"""
+    eigenvalues, eigenvectors = np.linalg.eig(cov)
+    return eigenvectors, np.diag(eigenvalues)
+
+
+rot_mat, scale_mat = _diagonalize(cov)
+
+rot = R.from_matrix(rot_mat)
+print(rot.as_quat())
+print(np.diag(scale_mat))
+
+splats = np.array([tuple(mean + rot.as_quat().tolist() + np.diag(scale_mat).tolist())],
+                  dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'),
+                         ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4')])
+
+e1 = PlyElement.describe(splats, 'splat')
+
+PlyData([e1], text=True).write("../res/data/splat.ply")

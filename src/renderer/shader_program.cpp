@@ -5,10 +5,15 @@
 #include <iostream>
 #include <sstream>
 
-#include "glad/glad.h"
-#include "glm/gtc/type_ptr.hpp"
+#include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
+#define STB_INCLUDE_IMPLEMENTATION
+#define STB_INCLUDE_LINE_GLSL
+#include <stb_include.h>
 
-std::string parseShader(const std::string &filepath) {
+#include "utility/config/config.h"
+
+std::string _parse_shader(const std::string &filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         throw shader_program_error("Failed to open file: " + filepath);
@@ -19,43 +24,49 @@ std::string parseShader(const std::string &filepath) {
     return buffer.str();
 }
 
-ShaderProgram::ShaderProgram(const ShaderProgramInfo& info) {
-    const std::string vertex_src = parseShader(info.vertexPath);
-    const std::string fragment_src = parseShader(info.fragmentPath);
-    const char* c_str;
-
+/** Compiles the given source code into the given GL shader object. Returns shader object's ID. */
+GLuint _compile_shader(const GLuint shader, const std::string& src_path) {
+    const char* include_path = Config::get_value(Config::ConfigGroup::Shaders, "paths", "include").c_str();
+    
+    std::string error;
+    error.resize(512);
+    const char* src = stb_include_file(
+        const_cast<char*>(src_path.c_str()), 
+        nullptr, 
+        const_cast<char*>(include_path), 
+        error.data()
+    );
+    if (!src) {
+        throw shader_program_error("Preprocessing of shader " + src_path + " failed. Error below.\n" + error);
+    }
+    
+    glShaderSource(shader, 1, &src, nullptr);  // Provide shader object with source code
+    glCompileShader(shader);  // Compile the shader object's underlying shader
+    
     int success;
-    std::string infoLog;
-    infoLog.resize(512);
-
-    // Vertex shader
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);  // Create shader object, and retrieves its ID
-    c_str = vertex_src.c_str();
-    glShaderSource(vertex_shader, 1, &c_str, nullptr);  // Provide shader object with source code
-    glCompileShader(vertex_shader);  // Compile the shader object's underlying shader
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if (!success) {
-        glGetShaderInfoLog(vertex_shader, 512, nullptr, infoLog.data());
-        throw shader_program_error("Failed to compile vertex shader at " + info.vertexPath + ". Info log below.\n" + infoLog);
+        glGetShaderInfoLog(shader, 512, nullptr, error.data());
+        throw shader_program_error("Failed to compile vertex shader at " + src_path + ". Info log below.\n" + error);
     }
+    
+    return shader;
+}
 
-    // Fragment shader
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    c_str = fragment_src.c_str();
-    glShaderSource(fragment_shader, 1, &c_str, nullptr);
-    glCompileShader(fragment_shader);
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragment_shader, 512, nullptr, infoLog.data());
-        throw shader_program_error("Failed to compile fragment shader at " + info.fragmentPath + ". Info log below.\n" + infoLog);
-    }
+ShaderProgram::ShaderProgram(const ShaderProgramInfo& info) {
+
+    GLuint vertex_shader = _compile_shader(glCreateShader(GL_VERTEX_SHADER), info.vertexPath);
+    GLuint fragment_shader = _compile_shader(glCreateShader(GL_FRAGMENT_SHADER), info.fragmentPath);
 
     // Full program
     m_id = glCreateProgram();  // Creates a program object, and retrieves its ID
     glAttachShader(m_id, vertex_shader);
     glAttachShader(m_id, fragment_shader);
     glLinkProgram(m_id);  // Link compiled shaders
-
+    
+    int success;
+    std::string infoLog;
+    infoLog.resize(512);
     glGetProgramiv(m_id, GL_LINK_STATUS, &success);
     if (!success) {
         glGetProgramInfoLog(m_id, 512, nullptr, infoLog.data());

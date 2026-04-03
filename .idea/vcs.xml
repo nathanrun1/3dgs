@@ -4,7 +4,9 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/glfw" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/glm" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/happly" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/imgui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/nlohmann" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/simpleini" vcs="Git" />
   </component>
 </project>

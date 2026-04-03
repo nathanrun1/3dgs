@@ -18,7 +18,7 @@ namespace Config {
      * @param section Section within the config group
      * @param key Key within the section
      * @param def Default value. If unspecified or set to "", an exception is thrown when the value is not found.
-     * @return Specified string value, or default value if not found
+     * @return Configured string value, or default value if not found
      */
     std::string get_value(ConfigGroup group, const std::string& section, const std::string& key, const std::string& def = "");
 }
