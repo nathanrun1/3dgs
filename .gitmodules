@@ -16,3 +16,6 @@
 [submodule "deps/nlohmann"]
 	path = deps/nlohmann
 	url = git@github.com:nlohmann/json.git
+[submodule "deps/happly"]
+	path = deps/happly
+	url = git@github.com:nmwsharp/happly.git

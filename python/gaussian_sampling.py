@@ -4,6 +4,7 @@ from plyfile import PlyData, PlyElement
 
 from scipy.spatial.transform import Rotation as R
 
+color = [1, 0, 0, 1]
 mean = [0, 0, 0]
 cov = [[1, 5, 0],
        [5, 1, 5],
@@ -27,9 +28,10 @@ rot = R.from_matrix(rot_mat)
 print(rot.as_quat())
 print(np.diag(scale_mat))
 
-splats = np.array([tuple(mean + rot.as_quat().tolist() + np.diag(scale_mat).tolist())],
+splats = np.array([tuple(mean + rot.as_quat().tolist() + np.diag(scale_mat).tolist() + color)],
                   dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'),
-                         ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4')])
+                         ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4'), ('r', 'f4'), ('g', 'f4'),
+                         ('b', 'f4'), ('a', 'f4')])
 
 e1 = PlyElement.describe(splats, 'splat')
 
