@@ -12,6 +12,7 @@
 #include "backend/glfw_backend.h"
 #include "backend/glfw_input.h"
 #include "input/enums.h"
+#include "utility/splat.h"
 #include "utility/tangent_space.h"
 #include "utility/config/config.h"
 #include "world/lighting.h"
@@ -137,6 +138,8 @@ std::vector<glm::vec3> load_points(const std::string& json_file) {
 }
 
 int main() {
+    std::vector<Splat> splats = load_splats("res/data/splat.ply");
+
     std::vector<glm::vec3> points = load_points("res/data/samples.json");
     
     GLFW::set_window_width(1600);

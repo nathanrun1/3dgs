@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <glm/glm.hpp>
-#include <happly.h>
 
 struct Splat {
     glm::vec3 position;
@@ -13,8 +12,9 @@ struct Splat {
     glm::vec4 color;
 };
 
-std::vector<Splat> load_splats(const std::string& ply_file) {
-
-}
+/**
+ * Loads a list of splats from the given .ply file
+ */
+std::vector<Splat> load_splats(const std::string& ply_file);
 
 #endif //WATERENGINE_SPLAT_H
