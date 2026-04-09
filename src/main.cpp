@@ -151,49 +151,6 @@ int main() {
     Input::append_key_callback(key_callback);
     Input::append_mouse_button_callback(mouse_callback);
 
-    // Assets
-    std::vector vertices(std::begin(cube_vertices), std::end(cube_vertices));
-    std::vector indices(std::begin(cube_indices), std::end(cube_indices));
-    calculate_tangents(vertices, indices);
-    Assets::Mesh cube = Assets::create_mesh(vertices, indices);
-
-    // Assets::Texture2D container = Assets::create_texture2d("res/textures/container.jpg");
-    // Assets::MaterialInfo material_info{};
-    // material_info.albedo_map = container;
-    // material_info.roughness_scale = 0.5;
-    // material_info.metallic_scale = 0.0;
-    // Assets::Material container_material = Assets::create_material(material_info);
-
-    Assets::MaterialInfo material_info_light{};
-    material_info_light.albedo_scale = glm::vec3(1.0);
-    material_info_light.roughness_scale = 1.0;
-    material_info_light.metallic_scale = 0.0;
-    material_info_light.flags |= Assets::MaterialFlag::Unlit;
-    Assets::Material light_material = Assets::create_material(material_info_light);
-    
-    Assets::MaterialInfo material_info_paving_stones{};
-    material_info_paving_stones.albedo_map = Assets::create_texture2d("res/textures/paving_stones/albedo.jpg");
-    material_info_paving_stones.roughness_map = Assets::create_texture2d("res/textures/paving_stones/roughness.jpg");
-    material_info_paving_stones.normal_map = Assets::create_texture2d("res/textures/paving_stones/normal_gl.jpg");
-    material_info_paving_stones.displacement_map = Assets::create_texture2d("res/textures/paving_stones/displacement.jpg");
-    material_info_paving_stones.displacement_scale = 5.0f;
-    Assets::Material stones_material = Assets::create_material(material_info_paving_stones);
-
-    // Lights
-    glm::vec3 light_pos = glm::vec3{3.0f, 5.0f, 0.0f};
-    World::add_light(World::Light{
-        light_pos,
-        World::LightType::Point,
-        {1.0f, 1.0f, 1.0f},
-        1.0f
-    });
-    World::add_light(World::Light{
-        {0.0f, 0.0f, 0.0f},
-        World::LightType::Ambient,
-        {1.0f, 1.0f, 1.0f},
-        0.1f
-    });
-
     // Shaders
     ShaderProgramInfo sp_info{
         Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
@@ -204,8 +161,6 @@ int main() {
     World::init();
     Renderer::init("default");
     
-    std::cout << "check" << std::endl;
-    
     while (!GLFW::window_should_close()) {
         Renderer::begin_draw();
         
@@ -215,22 +170,6 @@ int main() {
         ImGui::ShowDemoWindow();
         World::UpdateRegistry::run_all_callbacks();
 
-        // // Draw containers
-        // for (glm::vec3& pos : cubePositions) {
-        //     Transform transform;
-        //     transform.position = pos;
-        //     //transform.set_euler_angles(0.0f, glfwGetTime() * glm::radians(90.0f), 0.0f);
-        //     transform.scale = {2.0f, 1.0f, 2.0f};
-        //     Renderer::draw_mesh(cube, transform, stones_material);
-        // }
-        //
-        // // Draw light object
-        // Transform light_transform;
-        // light_transform.position = light_pos;
-        // light_transform.scale = glm::vec3(0.5f);
-        // Renderer::draw_mesh(cube, light_transform, light_material);
-        
-        //Renderer::draw_vertices(points, true);
         Renderer::draw_vertices(fullscreen_quad);
 
         ImGui::Render();

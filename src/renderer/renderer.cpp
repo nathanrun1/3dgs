@@ -102,6 +102,7 @@ namespace Renderer {
         glActiveTexture(GL_TEXTURE0); // Material maps in unit 0 TODO: don't hardcode this
 
         std::span<const Assets::Texture2D> material_maps = Assets::get_all_material_maps();
+        if (material_maps.size() <= 0) return;
 
         unsigned int width = material_maps[0].width;
         unsigned int height = material_maps[0].height;

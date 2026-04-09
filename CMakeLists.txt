@@ -54,6 +54,7 @@ add_executable(waterengine
         src/utility/config/config.h
         src/utility/config/config.cpp
         deps/stb/stb_include.h
+        src/utility/splat.h
 )
 
 target_include_directories(waterengine PUBLIC 
