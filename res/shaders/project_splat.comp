@@ -1,0 +1,31 @@
+﻿#version 460
+#define STB_INCLUDE_LINE_GLSL
+
+#include "utils/quat.h"
+
+#define MAX_SPLATS 1000
+
+struct Splat {
+    vec3 position;
+    vec4 rotation;
+    vec3 scale;
+    vec4 color;
+};
+
+layout (std430, binding = 0) buffer InputSplats {
+    uint count;
+    Splat splats[];
+};
+
+mat3 cov(Splat splat) {
+    mat3 rot = splat.rotation;
+    mat3 scale = mat3(splat.scale.x, 0.0, 0.0,  0.0, splat.scale.y, 0.0,  0.0, 0.0, splat.scale.z);
+    return scale * rot * transpose(rot) * transpose(scale);
+}
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    
+    
+}
+

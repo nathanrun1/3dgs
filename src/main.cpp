@@ -139,7 +139,12 @@ std::vector<glm::vec3> load_points(const std::string& json_file) {
 
 int main() {
     std::vector<Splat> splats = load_splats("res/data/splat.ply");
-
+    
+    
+    //std::cout << "Hello?????" << std::endl;
+    //std::cout << splats[0].color << std::endl;
+    
+    std::cout << "check" << std::endl;
     std::vector<glm::vec3> points = load_points("res/data/samples.json");
     
     GLFW::set_window_width(1600);
