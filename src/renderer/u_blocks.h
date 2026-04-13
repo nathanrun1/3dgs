@@ -1,9 +1,11 @@
 ﻿#ifndef WATERENGINE_U_BLOCKS_H
 #define WATERENGINE_U_BLOCKS_H
+#include "assets/splat.h"
 #include "glm/vec3.hpp"
 #include "world/lighting.h"
 
-// Structs that include padding to align with the std140 UBO layout
+// Structs that include padding to align with either the std140 UBO layout or std430 SSBO layout, depending on 
+//   whichever it's used for.
 namespace Renderer {
     constexpr size_t MAX_LIGHTS = 8;
 
@@ -56,6 +58,29 @@ namespace Renderer {
             , displacement_scale{material.displacement_scale}
             , flags{static_cast<unsigned int>(material.flags)}
         {}
+    };
+    
+    struct alignas(16) SSBSplat {
+        alignas(16) glm::vec3 position;
+        alignas(16) glm::vec4 rotation;
+        alignas(16) glm::vec3 scale;
+        alignas(16) glm::vec4 color;
+        
+        SSBSplat() = default;
+        
+        explicit SSBSplat(const Assets::Splat& splat)
+            : position{splat.position}
+            , rotation{splat.rotation}
+            , scale{splat.scale}
+            , color{splat.color}
+        {}
+    };
+    
+    struct alignas(16) SSBScreenSplat {
+        alignas(8)  glm::vec2 center;
+        alignas(8)  glm::mat2 cov;
+        alignas(16) glm::vec4 color;
+        alignas(8)  glm::vec2 offsets[4];
     };
 }
 

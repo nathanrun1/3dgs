@@ -12,7 +12,7 @@
 #include "backend/glfw_backend.h"
 #include "backend/glfw_input.h"
 #include "input/enums.h"
-#include "utility/splat.h"
+#include "assets/splat.h"
 #include "utility/tangent_space.h"
 #include "utility/config/config.h"
 #include "world/lighting.h"
@@ -99,22 +99,22 @@ std::vector<glm::vec3> fullscreen_quad = {
 };
 
 /** Re-initializes the renderer with the given shader program */
-void hot_reload(const ShaderProgramInfo& sp_info) {
-    std::cout << "Reloading..." << std::endl;
-    Renderer::create_program("hot", sp_info);
-    Renderer::init("hot");
-}
+// void hot_reload(const ShaderProgram& program) {
+//     std::cout << "Reloading..." << std::endl;
+//     Renderer::add_program("hot", program);
+//     Renderer::init("hot");
+// }
 
 void key_callback(Key key, Action action) {
     if (key == Key::Escape && action == Action::Press) {
         Input::set_cursor_mode(CursorMode::GUI);
     }
-    if (key == Key::R && action == Action::Press) {
-        hot_reload({
-        Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
-        Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag")
-        });
-    }
+    // if (key == Key::R && action == Action::Press) {
+    //     hot_reload({
+    //     Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
+    //     Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag")
+    //     });
+    // }
 }
 
 void mouse_callback(MouseButton mouse_button, Action action) {
@@ -138,7 +138,7 @@ std::vector<glm::vec3> load_points(const std::string& json_file) {
 }
 
 int main() {
-    std::vector<Splat> splats = load_splats("res/data/splat.ply");
+    Assets::load_splats("res/data/splat.ply");
     
     
     //std::cout << "Hello?????" << std::endl;
@@ -159,15 +159,8 @@ int main() {
     Input::append_key_callback(key_callback);
     Input::append_mouse_button_callback(mouse_callback);
 
-    // Shaders
-    ShaderProgramInfo sp_info{
-        Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert"),
-        Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag")
-    };
-    Renderer::create_program("default", sp_info);
-
     World::init();
-    Renderer::init("default");
+    Renderer::init();
     
     while (!GLFW::window_should_close()) {
         Renderer::begin_draw();
@@ -178,7 +171,8 @@ int main() {
         ImGui::ShowDemoWindow();
         World::UpdateRegistry::run_all_callbacks();
 
-        Renderer::draw_vertices(fullscreen_quad);
+        //Renderer::draw_vertices(fullscreen_quad);
+        Renderer::draw_splats();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

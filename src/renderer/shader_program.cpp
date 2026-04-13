@@ -53,28 +53,31 @@ GLuint _compile_shader(const GLuint shader, const std::string& src_path) {
     return shader;
 }
 
-ShaderProgram::ShaderProgram(const ShaderProgramInfo& info) {
-
-    GLuint vertex_shader = _compile_shader(glCreateShader(GL_VERTEX_SHADER), info.vertexPath);
-    GLuint fragment_shader = _compile_shader(glCreateShader(GL_FRAGMENT_SHADER), info.fragmentPath);
-
-    // Full program
-    m_id = glCreateProgram();  // Creates a program object, and retrieves its ID
-    glAttachShader(m_id, vertex_shader);
-    glAttachShader(m_id, fragment_shader);
-    glLinkProgram(m_id);  // Link compiled shaders
+ShaderProgram::ShaderProgram(const std::vector<ShaderType>& shader_types, const std::vector<std::string>& shader_paths) {
+    unsigned int id = glCreateProgram();
+    
+    std::vector<GLuint> shaders;
+    shaders.reserve(shader_paths.size());
+    for (int i = 0; i < shader_paths.size(); ++i) {
+        GLuint shader = _compile_shader(glCreateShader(static_cast<GLuint>(shader_types[i])), shader_paths[i]);
+        glAttachShader(id, shader);
+        shaders.push_back(shader);
+    }
+    
+    glLinkProgram(id);
     
     int success;
     std::string infoLog;
-    infoLog.resize(512);
-    glGetProgramiv(m_id, GL_LINK_STATUS, &success);
+    infoLog.resize(1028);
+    glGetProgramiv(id, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramInfoLog(m_id, 512, nullptr, infoLog.data());
+        glGetProgramInfoLog(id, 512, nullptr, infoLog.data());
         throw shader_program_error("Shader program linking failed! Info log below.\n" + infoLog);
     }
-
-    glDeleteShader(vertex_shader);  // Delete now-obsolete shader objects
-    glDeleteShader(fragment_shader);
+    
+    for (const GLuint& shader : shaders) {
+        glDeleteShader(shader);
+    }
 }
 
 void ShaderProgram::use() const {

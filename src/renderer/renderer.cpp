@@ -10,6 +10,7 @@
 #include "backend/glfw_backend.h"
 #include "deprecated/texture2d.h"
 #include "renderer/vertex.h"
+#include "utility/config/config.h"
 #include "world/transform.h"
 #include "world/world.h"
 #include "world/camera/camera.h"
@@ -18,7 +19,7 @@
 // Single buffer for all models
 
 namespace Renderer {
-    std::unordered_map<std::string, ShaderProgram> g_availablePrograms;
+    std::unordered_map<std::string, ShaderProgram> g_available_programs;
     ShaderProgram* g_activeProgram = nullptr;
     unsigned int g_meshVAO;
     unsigned int g_meshVBO;
@@ -31,6 +32,10 @@ namespace Renderer {
 
     unsigned int g_lightingUBO;
     unsigned int g_materialUBO;
+    
+    unsigned int g_splatSSBO;
+    unsigned int g_screen_splatSSBO;
+    unsigned int g_num_splats;
 
 
     unsigned int _texture_format(const int n_channels) {
@@ -156,27 +161,63 @@ namespace Renderer {
         glBufferData(GL_UNIFORM_BUFFER, sizeof(UBMaterial), &ub_material, GL_STATIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 1, g_materialUBO);  // Bind material UBO to binding 1
     }
+    
+    void _load_splats() {
+        glGenBuffers(1, &g_splatSSBO);
+        glGenBuffers(1, &g_screen_splatSSBO);
+        
+        // Load splat data into splat buffer, binding = 1
+        std::span<const Assets::Splat> splats = Assets::get_splats();
+        std::vector<SSBSplat> ssb_splats{};
+        ssb_splats.reserve(splats.size());
+        for (const Assets::Splat& splat : splats) {
+            ssb_splats.push_back(SSBSplat{splat});
+        }
+        g_num_splats = ssb_splats.size();
+        
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_splatSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ssb_splats.size() * sizeof(SSBSplat), ssb_splats.data(), GL_STATIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_splatSSBO);
+        
+        // Init screen splat buffer, binding = 0
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_screen_splatSSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, ssb_splats.size() * sizeof(SSBScreenSplat), nullptr, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_screen_splatSSBO);
+    }
 
 
-    void init(const std::string& program_id) {
-        use_program(program_id);
-
+    void init() {
+        std::string comp_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "comp");
+        std::string vert_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert");
+        std::string frag_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag");
+        
+        ShaderProgram proj_program = ShaderProgram{
+                {ShaderType::Compute}, {comp_path}
+        };
+        ShaderProgram render_program = ShaderProgram{
+                {ShaderType::Vertex, ShaderType::Fragment},
+                {vert_path, frag_path}
+        };
+        add_program("project_splats", proj_program);
+        add_program("render_splats", render_program);
+        
         GLFW::add_frame_buffer_size_callback(_frame_buffer_size_callback);
         
         _setup_points();
+        _load_splats();
         
-        _setup_models();
-        _load_models();
-
-        _init_textures();
-        _load_textures();
+        // _setup_models();
+        // _load_models();
+        //
+        // _init_textures();
+        // _load_textures();
+        //
+        // _init_lights();
+        // _load_lights();
+        //
+        // _init_materials();
         
-        _init_lights();
-        _load_lights();
-        
-        _init_materials();
-        
-        glEnable(GL_DEPTH_TEST);
+        // glEnable(GL_DEPTH_TEST);
     }
 
     void begin_draw() {
@@ -184,9 +225,11 @@ namespace Renderer {
         glClearColor(bg_color.r, bg_color.g, bg_color.b, bg_color.a);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        g_activeProgram->set_mat4("uVP", World::get_main_camera().get_vp_matrix());
-        g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
-        g_activeProgram->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
+        //g_activeProgram->set_mat4("uVP", World::get_main_camera().get_vp_matrix());
+        // g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
+        // g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
+        // g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        //g_activeProgram->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
         
         glPointSize(5.0f);
     }
@@ -211,14 +254,25 @@ namespace Renderer {
         GLuint draw_mode = as_points ? GL_POINTS : GL_TRIANGLES;
         glDrawArrays(draw_mode, 0, vertices.size());
     }
-
-    void create_program(const std::string &program_id, const ShaderProgramInfo &program_info) {
-        g_availablePrograms.insert_or_assign(program_id, ShaderProgram{program_info});
+    
+    void draw_splats() {
+        use_program("project_splats");
+        glDispatchCompute(g_num_splats, 1, 1);
+        
+        use_program("render_splats");
+        g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
+        g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
+        g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g_num_splats);
     }
 
-    void use_program(const std::string &program_id) {
+    void add_program(const std::string& program_id, const ShaderProgram& program) {
+        g_available_programs.insert_or_assign(program_id, program);
+    }
+
+    void use_program(const std::string& program_id) {
         try {
-            ShaderProgram& program = g_availablePrograms.at(program_id);
+            ShaderProgram& program = g_available_programs.at(program_id);
             program.use();
             g_activeProgram = &program;
         } catch (std::out_of_range&) {

@@ -12,17 +12,16 @@ public:
     explicit shader_program_error(const std::string& msg) : std::runtime_error(msg) {}
 };
 
-struct ShaderProgramInfo {
-    /** Project-relative path to vertex shader */
-    const std::string& vertexPath;
-    /** Project-relative path to fragment shader */
-    const std::string& fragmentPath;
+enum class ShaderType {
+    Vertex = GL_VERTEX_SHADER,
+    Fragment = GL_FRAGMENT_SHADER,
+    Compute = GL_COMPUTE_SHADER
 };
 
 /** Encapulates an OpenGL shader program */
 class ShaderProgram {
 public:
-    explicit ShaderProgram(const ShaderProgramInfo& info);
+    explicit ShaderProgram(const std::vector<ShaderType>& shader_types, const std::vector<std::string>& shader_paths);
 
     /** Set this as the active shader program */
     void use() const;

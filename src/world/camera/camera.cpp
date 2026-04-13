@@ -29,12 +29,12 @@ glm::mat4 Camera::get_view_matrix() const {
     return inverse(transform.get_matrix());
 }
 
-glm::mat4 Camera::get_perp_matrix() const {
+glm::mat4 Camera::get_proj_matrix() const {
     return glm::perspectiveFov(m_fovy, (float)GLFW::get_window_width(), (float)GLFW::get_window_height(), m_near, m_far);
 }
 
 glm::mat4 Camera::get_vp_matrix() const {
-    return get_perp_matrix() * get_view_matrix();
+    return get_proj_matrix() * get_view_matrix();
 }
 
 float Camera::get_fovy() const {

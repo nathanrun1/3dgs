@@ -19,9 +19,9 @@ struct Camera {
 
     /* Generate camera's view matrix */
     [[nodiscard]] glm::mat4 get_view_matrix() const;
-    /* Generate camera's perspective matrix */
-    [[nodiscard]] glm::mat4 get_perp_matrix() const;
-    /* Generate camera's perspective * view matrix */
+    /* Generate camera's projection matrix */
+    [[nodiscard]] glm::mat4 get_proj_matrix() const;
+    /* Generate camera's projection * view matrix */
     [[nodiscard]] glm::mat4 get_vp_matrix() const;
 
     /* Set then camera's background color */

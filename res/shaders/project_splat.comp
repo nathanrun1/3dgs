@@ -1,9 +1,12 @@
-﻿#version 460
+#version 460
 #define STB_INCLUDE_LINE_GLSL
 
-#include "utils/quat.h"
+#include "utils/quat.glsl"
 
-#define MAX_SPLATS 1000
+// How many standard deviations away from the splat center should the quad boundaries be
+#define SPLAT_QUAD_SCALE 3.0
+
+layout (local_size_x = 256) in;
 
 struct Splat {
     vec3 position;
@@ -12,20 +15,68 @@ struct Splat {
     vec4 color;
 };
 
-layout (std430, binding = 0) buffer InputSplats {
-    uint count;
+struct ScreenSplat {
+    vec2 center;
+    mat2 cov;
+    vec4 color;
+    vec2 offsets[4];
+};
+
+layout (std430, binding = 0) buffer ScreenSplats {
+    ScreenSplat screen_splats[];
+};
+
+layout (std430, binding = 1) readonly buffer InputSplats {
     Splat splats[];
 };
 
-mat3 cov(Splat splat) {
-    mat3 rot = splat.rotation;
+uniform mat4 uView;
+uniform mat4 uProjection;
+uniform vec3 uCameraPos;
+
+/** Calculates A such that the 3D Covariance matrix is equal to AA^T */
+mat3 A_3d(Splat splat) {
+    mat3 rot = quat_to_mat3(splat.rotation);
     mat3 scale = mat3(splat.scale.x, 0.0, 0.0,  0.0, splat.scale.y, 0.0,  0.0, 0.0, splat.scale.z);
-    return scale * rot * transpose(rot) * transpose(scale);
+    return scale * rot;
+}
+
+/** Calculates the Jacobian of the projection function at the given splat's position */
+mat3x2 jac(Splat splat) {
+    vec3 eye_pos = (uView * vec4(splat.position, 1.0)).xyz;
+    float inv_z = 1 / eye_pos.z;
+    mat3x2 jac;
+    jac[0] = vec2(uProjection[0][0], uProjection[0][1]);
+    jac[1] = vec2(uProjection[1][0], uProjection[1][1]);
+    jac[2] = vec2(uProjection[2][0] - splat.position.x, uProjection[2][1] - splat.position.y);
+    return jac * inv_z;
+}
+
+/** Calculates the 2D screenspace covariance matrix */
+mat2 cov_2d(Splat splat) {
+    mat3 rot = mat3(uView);
+    mat3x2 A = jac(splat) * rot * A_3d(splat);
+    return A * transpose(A);
 }
 
 void main() {
-    uint id = gl_GlobalInvocationID.x;
+    uint idx = gl_GlobalInvocationID.x;
+
+    mat2 cov = cov_2d(splats[idx]);
     
+    screen_splats[idx].cov = cov;
+    vec4 clip = uProjection * uView * vec4(splats[idx].position, 1.0);
+    screen_splats[idx].center = clip.xy / clip.w;
+    screen_splats[idx].color = splats[idx].color;
+
     
+
+    // x & y axis standard deviation, scaled to determine quad size
+    float s_x = sqrt(cov[0][0]);
+    float s_y = sqrt(cov[1][1]);
+    vec2 s = SPLAT_QUAD_SCALE * vec2(sqrt(cov[0][0]), sqrt(cov[1][1]));  // TODO: calculate tighter bounds
+
+    // Screen-space quad vertex offsets
+    screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * -1.0, s * vec2(1.0, -1.0));
 }
 

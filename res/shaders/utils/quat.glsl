@@ -1,4 +1,4 @@
-﻿/** Converts a quaternion to a 3x3 rotation matrix */
+/** Converts a quaternion to a 3x3 rotation matrix */
 mat3 quat_to_mat3(vec4 q) {
     // Retrieved from: https://gist.github.com/pezcode/150eb97dd41b67b611d0de7bae273e98
     q *= 1.414214;  // multiply by sqrt(2) to get rid of all the 2.0 factors in the matrix

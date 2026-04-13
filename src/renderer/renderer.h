@@ -10,7 +10,7 @@
 
 namespace Renderer {
     /** Initializes renderer with given shader program */
-    void init(const std::string& program_id);
+    void init();
 
     /** Starts the frame draw */
     void begin_draw();
@@ -20,9 +20,12 @@ namespace Renderer {
     
     /** Draws the given vertices */
     void draw_vertices(const std::vector<glm::vec3>& vertices, bool as_points = false);
+    
+    /** Draws the loaded splats */
+    void draw_splats();
 
     /** Creates shader program from given shaders and adds it to available program list */
-    void create_program(const std::string& program_id, const ShaderProgramInfo &program_info);
+    void add_program(const std::string& program_id, const ShaderProgram& program);
 
     /** Uses the shader program with the given id */
     void use_program(const std::string& program_id);
