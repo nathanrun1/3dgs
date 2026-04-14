@@ -37,6 +37,8 @@ namespace Renderer {
     unsigned int g_screen_splatSSBO;
     unsigned int g_num_splats;
 
+    unsigned int g_emptyVAO;
+
 
     unsigned int _texture_format(const int n_channels) {
         switch (n_channels) {
@@ -161,11 +163,15 @@ namespace Renderer {
         glBufferData(GL_UNIFORM_BUFFER, sizeof(UBMaterial), &ub_material, GL_STATIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, 1, g_materialUBO);  // Bind material UBO to binding 1
     }
-    
-    void _load_splats() {
+
+    void _setup_splats()
+    {
         glGenBuffers(1, &g_splatSSBO);
         glGenBuffers(1, &g_screen_splatSSBO);
-        
+        glGenVertexArrays(1, &g_emptyVAO);
+    }
+    
+    void _load_splats() {
         // Load splat data into splat buffer, binding = 1
         std::span<const Assets::Splat> splats = Assets::get_splats();
         std::vector<SSBSplat> ssb_splats{};
@@ -190,20 +196,30 @@ namespace Renderer {
         std::string comp_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "comp");
         std::string vert_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "vert");
         std::string frag_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "frag");
-        
+        std::string points_vert_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "points_vert");
+        std::string points_frag_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "points_frag");
+
         ShaderProgram proj_program = ShaderProgram{
                 {ShaderType::Compute}, {comp_path}
         };
+        add_program("project_splats", proj_program);
+
         ShaderProgram render_program = ShaderProgram{
                 {ShaderType::Vertex, ShaderType::Fragment},
                 {vert_path, frag_path}
         };
-        add_program("project_splats", proj_program);
         add_program("render_splats", render_program);
+
+        ShaderProgram points_program = ShaderProgram{
+            {ShaderType::Vertex, ShaderType::Fragment},
+            {points_vert_path, points_frag_path}
+        };
+        add_program("points", points_program);
         
         GLFW::add_frame_buffer_size_callback(_frame_buffer_size_callback);
         
         _setup_points();
+        _setup_splats();
         _load_splats();
         
         // _setup_models();
@@ -217,7 +233,7 @@ namespace Renderer {
         //
         // _init_materials();
         
-        // glEnable(GL_DEPTH_TEST);
+        glDisable(GL_DEPTH_TEST);
     }
 
     void begin_draw() {
@@ -245,7 +261,15 @@ namespace Renderer {
     }
 
     void draw_vertices(const std::vector<glm::vec3>& vertices, bool as_points) {
+        if (as_points) use_program("points");
+
+        // std::cout << "Projection" << World::get_main_camera().get_proj_matrix() << std::endl;
+        // std::cout << World::get_main_camera().get_vp_matrix() << std::endl;
+        // std::cout << "First point:" << vertices[0] << std::endl;
+        // std::cout << "Projected:" << World::get_main_camera().get_vp_matrix() * glm::vec4(vertices[0], 1.0) << std::endl;
+
         g_activeProgram->set_mat4("uModel", glm::identity<glm::mat4>());
+        g_activeProgram->set_mat4("uVP", World::get_main_camera().get_vp_matrix());
         
         glBindVertexArray(g_pointsVAO);
         glBindBuffer(GL_ARRAY_BUFFER, g_pointsVBO);
@@ -258,16 +282,21 @@ namespace Renderer {
     void draw_splats() {
         use_program("project_splats");
         glDispatchCompute(g_num_splats, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         
         use_program("render_splats");
         g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
         g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
         g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+
+        glBindVertexArray(g_emptyVAO);
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g_num_splats);
     }
 
     void add_program(const std::string& program_id, const ShaderProgram& program) {
         g_available_programs.insert_or_assign(program_id, program);
+        std::cout << program_id << " assigned to program with ID " << program.get_id() << std::endl;
+        std::cout << "Id in map: " << g_available_programs.at(program_id).get_id() << std::endl;
     }
 
     void use_program(const std::string& program_id) {
