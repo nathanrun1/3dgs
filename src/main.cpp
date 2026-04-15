@@ -166,7 +166,7 @@ int main() {
         World::UpdateRegistry::run_all_callbacks();
 
         Renderer::draw_vertices(points, true);
-        //Renderer::draw_splats();
+        Renderer::draw_splats();
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

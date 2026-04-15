@@ -19,7 +19,6 @@ flat out uint splatIndex;
 out vec2 vOffset;
 
 void main() {
-    //uint splat_idx = sorted_indices[gl_InstanceID];
     splatIndex = gl_InstanceID;
     vOffset = screen_splats[splatIndex].offsets[gl_VertexID];
     

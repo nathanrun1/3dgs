@@ -30,11 +30,8 @@ GLuint _compile_shader(const GLuint shader, const std::string& src_path) {
     
     std::string error;
     error.resize(512);
-    const char* src = stb_include_file(
-        const_cast<char*>(src_path.c_str()), 
-        nullptr, 
-        const_cast<char*>(include_path), 
-        error.data()
+    const char* src = stb_include_file(const_cast<char*>(src_path.c_str()), nullptr, const_cast<char*>(include_path),
+    error.data()
     );
     if (!src) {
         throw shader_program_error("Preprocessing of shader " + src_path + " failed. Error below.\n" + error);
@@ -54,24 +51,25 @@ GLuint _compile_shader(const GLuint shader, const std::string& src_path) {
 }
 
 ShaderProgram::ShaderProgram(const std::vector<ShaderType>& shader_types, const std::vector<std::string>& shader_paths) {
-    unsigned int id = glCreateProgram();
+    m_id = glCreateProgram();
+    std::cout << "Created program with id " << m_id << std::endl;
     
     std::vector<GLuint> shaders;
     shaders.reserve(shader_paths.size());
     for (int i = 0; i < shader_paths.size(); ++i) {
-        GLuint shader = _compile_shader(glCreateShader(static_cast<GLuint>(shader_types[i])), shader_paths[i]);
-        glAttachShader(id, shader);
+        GLuint shader = _compile_shader(glCreateShader(static_cast<unsigned int>(shader_types[i])), shader_paths[i]);
+        glAttachShader(m_id, shader);
         shaders.push_back(shader);
     }
     
-    glLinkProgram(id);
+    glLinkProgram(m_id);
     
     int success;
     std::string infoLog;
-    infoLog.resize(1028);
-    glGetProgramiv(id, GL_LINK_STATUS, &success);
+    infoLog.resize(512);
+    glGetProgramiv(m_id, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramInfoLog(id, 512, nullptr, infoLog.data());
+        glGetProgramInfoLog(m_id, 512, nullptr, infoLog.data());
         throw shader_program_error("Shader program linking failed! Info log below.\n" + infoLog);
     }
     
