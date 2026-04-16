@@ -165,7 +165,7 @@ int main() {
         ImGui::ShowDemoWindow();
         World::UpdateRegistry::run_all_callbacks();
 
-        Renderer::draw_vertices(points, true);
+        //Renderer::draw_vertices(points, true);
         Renderer::draw_splats();
 
         ImGui::Render();

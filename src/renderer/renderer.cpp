@@ -280,8 +280,10 @@ namespace Renderer {
     }
     
     void draw_splats() {
+        const int NUM_WORKGROUPS = 256;
+
         use_program("project_splats");
-        glDispatchCompute(g_num_splats, 1, 1);
+        glDispatchCompute((g_num_splats + NUM_WORKGROUPS - 1) / NUM_WORKGROUPS, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         
         use_program("render_splats");
@@ -295,8 +297,6 @@ namespace Renderer {
 
     void add_program(const std::string& program_id, const ShaderProgram& program) {
         g_available_programs.insert_or_assign(program_id, program);
-        std::cout << program_id << " assigned to program with ID " << program.get_id() << std::endl;
-        std::cout << "Id in map: " << g_available_programs.at(program_id).get_id() << std::endl;
     }
 
     void use_program(const std::string& program_id) {

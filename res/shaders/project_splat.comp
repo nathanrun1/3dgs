@@ -5,8 +5,9 @@
 
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
+#define NUM_WORKGROUPS 256
 
-layout (local_size_x = 256) in;
+layout (local_size_x = NUM_WORKGROUPS) in;
 
 struct Splat {
     vec3 position;
@@ -68,8 +69,6 @@ void main() {
     vec4 clip = uProjection * uView * vec4(splats[idx].position, 1.0);
     screen_splats[idx].center = clip.xy / clip.w;
     screen_splats[idx].color = splats[idx].color;
-
-    
 
     // x & y axis standard deviation, scaled to determine quad size
     float s_x = sqrt(cov[0][0]);

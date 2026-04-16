@@ -52,8 +52,7 @@ GLuint _compile_shader(const GLuint shader, const std::string& src_path) {
 
 ShaderProgram::ShaderProgram(const std::vector<ShaderType>& shader_types, const std::vector<std::string>& shader_paths) {
     m_id = glCreateProgram();
-    std::cout << "Created program with id " << m_id << std::endl;
-    
+
     std::vector<GLuint> shaders;
     shaders.reserve(shader_paths.size());
     for (int i = 0; i < shader_paths.size(); ++i) {
@@ -87,7 +86,6 @@ void ShaderProgram::set_int(const std::string& uniform, const int &value) const 
 }
 
 void ShaderProgram::set_mat4(const std::string& uniform, const glm::mat4 &value, GLboolean transpose) const {
-    std::cout << "Uniform set to program id " << m_id << std::endl;
     glUniformMatrix4fv(glGetUniformLocation(m_id, uniform.c_str()), 1, transpose, glm::value_ptr(value));
 }
 

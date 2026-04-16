@@ -21,5 +21,6 @@ out vec4 fragColor;
 
 void main() {
     mat2 cov = screen_splats[splatIndex].cov;
-    fragColor = screen_splats[splatIndex].color * vec4(bivariate_pdf(vOffset, cov));
+    //fragColor = vec4(1.0) * bivariate_pdf(vOffset, cov);
+    fragColor = screen_splats[splatIndex].color * bivariate_pdf(vOffset, cov);
 }
