@@ -76,6 +76,6 @@ void main() {
     vec2 s = SPLAT_QUAD_SCALE * vec2(sqrt(cov[0][0]), sqrt(cov[1][1]));  // TODO: calculate tighter bounds
 
     // Screen-space quad vertex offsets
-    screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * -1.0, s * vec2(1.0, -1.0));
+    screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
 }
 

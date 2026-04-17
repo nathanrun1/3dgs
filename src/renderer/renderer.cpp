@@ -283,6 +283,9 @@ namespace Renderer {
         const int NUM_WORKGROUPS = 256;
 
         use_program("project_splats");
+        g_activeProgram->set_mat4("uProjection", World::get_main_camera().get_proj_matrix());
+        g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
+        g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
         glDispatchCompute((g_num_splats + NUM_WORKGROUPS - 1) / NUM_WORKGROUPS, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         
@@ -290,6 +293,7 @@ namespace Renderer {
         g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
         g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
         g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        g_activeProgram->set_vec3("uBackgroundColor", World::get_main_camera().get_background_color());
 
         glBindVertexArray(g_emptyVAO);
         glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g_num_splats);

@@ -19,8 +19,11 @@ in vec2 vOffset;
 
 out vec4 fragColor;
 
+uniform vec3 uBackgroundColor;
+
 void main() {
     mat2 cov = screen_splats[splatIndex].cov;
     //fragColor = vec4(1.0) * bivariate_pdf(vOffset, cov);
-    fragColor = screen_splats[splatIndex].color * bivariate_pdf(vOffset, cov);
+    float pdf = bivariate_pdf(vOffset, cov);
+    fragColor = vec4(mix(uBackgroundColor, screen_splats[splatIndex].color.rgb, pdf), pdf);
 }

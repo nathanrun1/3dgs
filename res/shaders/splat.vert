@@ -26,5 +26,5 @@ void main() {
     //vOffset = my_offsets[gl_VertexID];
 
     //gl_Position = vec4(screen_splats[splatIndex].center + vOffset, 0.0, 1.0);
-    gl_Position = vec4(vec2(0.0) + vOffset, 0.0, 1.0);
+    gl_Position = vec4(screen_splats[splatIndex].center + vOffset, 0.0, 1.0);
 }
