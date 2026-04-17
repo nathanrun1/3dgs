@@ -1,7 +1,39 @@
 #version 460
 #define STB_INCLUDE_LINE_GLSL
 
-#include "utils/quat.glsl"
+#line       1        1 
+/** Converts a quaternion to a 3x3 rotation matrix */
+mat3 quat_to_mat3(vec4 q) {
+    // Retrieved from: https://gist.github.com/pezcode/150eb97dd41b67b611d0de7bae273e98
+    q *= 1.414214;  // multiply by sqrt(2) to get rid of all the 2.0 factors in the matrix
+
+    float xx = q.x*q.x;
+    float xy = q.x*q.y;
+    float xz = q.x*q.z;
+    float xw = q.x*q.w;
+
+    float yy = q.y*q.y;
+    float yz = q.y*q.z;
+    float yw = q.y*q.w;
+
+    float zz = q.z*q.z;
+    float zw = q.z*q.w;
+
+    return mat3(
+    1.0 - yy - zz,
+    xy + zw,
+    xz - yw,
+
+    xy - zw,
+    1.0 - xx - zz,
+    yz + xw,
+
+    xz + yw,
+    yz - xw,
+    1.0 - xx - yy
+    );
+}
+#line      5        0 
 
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
@@ -38,18 +70,20 @@ uniform vec3 uCameraPos;
 /** Calculates A such that the 3D Covariance matrix is equal to AA^T */
 mat3 A_3d(Splat splat) {
     mat3 rot = quat_to_mat3(splat.rotation);
-    mat3 scale = mat3(splat.scale.x, 0.0, 0.0,  0.0, splat.scale.y, 0.0,  0.0, 0.0, splat.scale.z);
-    return scale * rot;
+    rot[0] *= splat.scale.x;
+    rot[1] *= splat.scale.y;
+    rot[2] *= splat.scale.z;
+    return rot;
 }
 
 /** Calculates the Jacobian of the projection function at the given splat's position */
 mat3x2 jac(Splat splat) {
-    vec3 eye_pos = (uView * vec4(splat.position, 1.0)).xyz;
-    float inv_z = 1 / eye_pos.z;
+    vec3 view_pos = (uView * vec4(splat.position, 1.0)).xyz;
+    float inv_z = 1 / view_pos.z;
     mat3x2 jac;
     jac[0] = vec2(uProjection[0][0], uProjection[0][1]);
     jac[1] = vec2(uProjection[1][0], uProjection[1][1]);
-    jac[2] = vec2(uProjection[2][0] - splat.position.x, uProjection[2][1] - splat.position.y);
+    jac[2] = vec2(-(uProjection[0][0] * view_pos.x + uProjection[1][0] * view_pos.y), -(uProjection[1][0] * view_pos.x + uProjection[1][1] * view_pos.y)) * inv_z;
     return jac * inv_z;
 }
 
@@ -60,11 +94,14 @@ mat2 cov_2d(Splat splat) {
     return A * transpose(A);
 }
 
+mat2 my_cov = mat2(1.0);
+
 void main() {
     uint idx = gl_GlobalInvocationID.x;
 
+    //mat2 cov = cov_2d(splats[idx]);
     mat2 cov = cov_2d(splats[idx]);
-    
+
     screen_splats[idx].cov = cov;
     vec4 clip = uProjection * uView * vec4(splats[idx].position, 1.0);
     screen_splats[idx].center = clip.xy / clip.w;
@@ -73,7 +110,7 @@ void main() {
     // x & y axis standard deviation, scaled to determine quad size
     float s_x = sqrt(cov[0][0]);
     float s_y = sqrt(cov[1][1]);
-    vec2 s = SPLAT_QUAD_SCALE * vec2(sqrt(cov[0][0]), sqrt(cov[1][1]));  // TODO: calculate tighter bounds
+    vec2 s = SPLAT_QUAD_SCALE * vec2(s_x, s_y);  // TODO: calculate tighter bounds
 
     // Screen-space quad vertex offsets
     screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
