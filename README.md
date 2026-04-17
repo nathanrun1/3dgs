@@ -5,7 +5,8 @@ The stack of this project is C++ and OpenGL
 
 # 2026-04-16
 Lots of progress. Got the full pipeline drafted, but ofc did not work initially. A few issues, and turns out I wasn't even passing uniforms to the compute shader, but seems to be doing something now. Looks like the scaling is completely off.
-[Screencast from 2026-04-16 19-34-46.webm](https://github.com/user-attachments/assets/da8633cc-525c-41b3-96e8-ec79962c51c9)
+<video src="https://github.com/user-attachments/assets/b7a4ae2f-d16e-4846-a857-db0c8c1dd237" controls="controls" style="max-width: 100%;">
+</video>
 
 
 # 2026-04-02
