@@ -4,12 +4,19 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 The stack of this project is C++ and OpenGL
 
 # 2026-04-16
-# 10PM
+## 11PM
+OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK LFGG. Turns out you aren't supposed to normalize the bivariate normal p.d.f., i.e. you aren't supposed to use the p.d.f. directly as the opacity. My intuition wrongly assumed that the total radiance from the splat should be invariant with distance, but I forgot about the inverse square law. The total radiance per solid angle from the splat is proportional to r^2 (where r is distance to the splat), yes, but I forgot that the radiance received from that splat is proportional to 1/r^2, cancelling out that effect. So, we remove the `1/sqrt(determinant(cov))` normalization factor, and just use the transformed standard p.d.f.'s value as is. This way, the radiance (brightness) that we receive from any location on the splat does not vary with distance, just like irl.
+
+Now just gotta get rid of this mirrored one behind me.
+<video src="https://github.com/user-attachments/assets/f04f8a2d-c7d2-4c0e-8dd6-c6db8f0544f2" controls="controls" style="max-width: 100%;">
+</video>
+
+## 10PM
 Niceeeeee, now the shape is correct, bright as hell tho. Density distribution is clearly off.
 <video src="https://github.com/user-attachments/assets/b81de7bd-803c-400c-b863-97361bc79419" controls="controls" style="max-width: 100%;">
 </video>
 
-# 8PM
+## 8PM
 Lots of progress. Got the full pipeline drafted, but ofc did not work initially. A few issues, and turns out I wasn't even passing uniforms to the compute shader, but seems to be doing something now. Looks like the scaling is completely off.
 <video src="https://github.com/user-attachments/assets/b7a4ae2f-d16e-4846-a857-db0c8c1dd237" controls="controls" style="max-width: 100%;">
 </video>
