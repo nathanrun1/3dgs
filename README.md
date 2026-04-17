@@ -4,10 +4,15 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 The stack of this project is C++ and OpenGL
 
 # 2026-04-16
+# 10PM
+Niceeeeee, now the shape is correct, bright as hell tho. Density distribution is clearly off.
+<video src="https://github.com/user-attachments/assets/b81de7bd-803c-400c-b863-97361bc79419" controls="controls" style="max-width: 100%;">
+</video>
+
+# 8PM
 Lots of progress. Got the full pipeline drafted, but ofc did not work initially. A few issues, and turns out I wasn't even passing uniforms to the compute shader, but seems to be doing something now. Looks like the scaling is completely off.
 <video src="https://github.com/user-attachments/assets/b7a4ae2f-d16e-4846-a857-db0c8c1dd237" controls="controls" style="max-width: 100%;">
 </video>
-
 
 # 2026-04-02
 Successfully rendered 2D splats, here's some with different covariance matrices (a lot of this step was understanding how the multivariate gaussian p.d.f. is derived, and then implementing it). Examples are below.
