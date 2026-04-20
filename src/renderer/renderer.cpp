@@ -36,6 +36,7 @@ namespace Renderer {
     unsigned int g_splatSSBO;
     unsigned int g_screen_splatSSBO;
     unsigned int g_num_splats;
+    unsigned int g_splat_INDB;
 
     unsigned int g_emptyVAO;
 
@@ -168,6 +169,7 @@ namespace Renderer {
     {
         glGenBuffers(1, &g_splatSSBO);
         glGenBuffers(1, &g_screen_splatSSBO);
+        glGenBuffers(1, &g_splat_INDB);
         glGenVertexArrays(1, &g_emptyVAO);
     }
     
@@ -189,6 +191,12 @@ namespace Renderer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_screen_splatSSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, ssb_splats.size() * sizeof(SSBScreenSplat), nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_screen_splatSSBO);
+
+        // Init indirect draw arrays command buffer
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
+        SSBDrawArraysIndirectCommand cmd = {4, 0, 0, 0};
+        glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(SSBDrawArraysIndirectCommand), &cmd, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, g_splat_INDB);
     }
 
 
@@ -278,7 +286,7 @@ namespace Renderer {
         GLuint draw_mode = as_points ? GL_POINTS : GL_TRIANGLES;
         glDrawArrays(draw_mode, 0, vertices.size());
     }
-    
+
     void draw_splats() {
         const int NUM_WORKGROUPS = 256;
 
@@ -286,9 +294,15 @@ namespace Renderer {
         g_activeProgram->set_mat4("uProjection", World::get_main_camera().get_proj_matrix());
         g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
         g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        g_activeProgram->set_uint("uNumSplats", g_num_splats);
+
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
+        glm::uint zero = 0;
+        glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);
         glDispatchCompute((g_num_splats + NUM_WORKGROUPS - 1) / NUM_WORKGROUPS, 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT & GL_COMMAND_BARRIER_BIT);
+
+
         use_program("render_splats");
         g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
         g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
@@ -296,7 +310,7 @@ namespace Renderer {
         g_activeProgram->set_vec3("uBackgroundColor", World::get_main_camera().get_background_color());
 
         glBindVertexArray(g_emptyVAO);
-        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g_num_splats);
+        glDrawArraysIndirect(GL_TRIANGLE_STRIP, (void*)0);
     }
 
     void add_program(const std::string& program_id, const ShaderProgram& program) {

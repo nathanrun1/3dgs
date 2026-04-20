@@ -82,6 +82,13 @@ namespace Renderer {
         alignas(16) glm::vec4 color;
         alignas(8)  glm::vec2 offsets[4];
     };
+
+    struct alignas(4) SSBDrawArraysIndirectCommand {
+        alignas(4) glm::uint count;
+        alignas(4) glm::uint instance_count;
+        alignas(4) glm::uint first;
+        alignas(4) glm::uint base_instance;
+    };
 }
 
 #endif //WATERENGINE_U_BLOCKS_H
