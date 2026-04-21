@@ -4,11 +4,13 @@
 #include <iostream>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/io.hpp>
+#include <imgui.h>
 
 #include "u_blocks.h"
 #include "assets/materials.h"
 #include "backend/glfw_backend.h"
 #include "deprecated/texture2d.h"
+#include "glm/gtx/string_cast.hpp"
 #include "renderer/vertex.h"
 #include "utility/config/config.h"
 #include "world/transform.h"
@@ -289,6 +291,13 @@ namespace Renderer {
 
     void draw_splats() {
         const int NUM_WORKGROUPS = 256;
+
+        // TESTING:
+        ImGui::Begin("Splats");
+        glm::vec4 splat_screenspace = World::get_main_camera().get_proj_matrix() * World::get_main_camera().get_view_matrix() * glm::vec4(Assets::get_splats()[0].position, 1.0);
+        glm::vec2 splat_ndc = glm::vec2(splat_screenspace.x, splat_screenspace.y) / splat_screenspace.w;
+        ImGui::Text(("Center of splat 0: " + glm::to_string(splat_ndc)).c_str());
+        ImGui::End();
 
         use_program("project_splats");
         g_activeProgram->set_mat4("uProjection", World::get_main_camera().get_proj_matrix());
