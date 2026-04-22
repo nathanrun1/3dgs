@@ -4,6 +4,14 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 The stack of this project is C++ and OpenGL
 
 # 2026-04-22
+# 2
+Generated 100 random splats... this is what it looks like without any sorting. Also those grazing angle artifacts seem to come up again (notice the flashing).
+
+
+https://github.com/user-attachments/assets/36195432-fc37-4492-b8f3-43a352842ce6
+
+
+# 1
 A proper splat, no duplicate behind me (added depth culling to the compute shader). Also fixed an issue where the splat covered the screen if you look at around a 90 degree angle, this is due to the splat's x/y coordinate deviation being high as well as viewspace depth (distance along camera's axis) being low. Since the Jacobian only linearly approximates projection, it drastically overestimates the splat's actual extent on the screen, having it cover your screen as viewspace z approaches 0. So, you clamp the viewspace position used for the Jacobian calculation within some range of the view frustum to avoid the viewspace x/z or y/z becoming too large, which although inaccurate at grazing angles (which barely matters), fixes the issue unless you're unnecessarily close to the splat. Sick.
 Next up:
 - Multiple splats at once (will need Z sorting, ideally on the compute shader)
