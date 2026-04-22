@@ -41,6 +41,11 @@ float Camera::get_fovy() const {
     return m_fovy;
 }
 
+glm::vec2 Camera::tan_fov() const {
+    float tan_fovy = glm::tan(m_fovy / 2.0);
+    return glm::vec2(GLFW::get_aspect_ratio() * tan_fovy, tan_fovy);
+}
+
 void Camera::set_background_color(const glm::vec4 &color) {
     m_background_color = color;
 }

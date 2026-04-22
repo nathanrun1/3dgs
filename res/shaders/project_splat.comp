@@ -6,7 +6,7 @@
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
 #define NUM_WORKGROUPS 256
-#define VIEW_XY_LIM 1.3
+#define VIEW_XY_LIM 0.3
 
 layout (local_size_x = NUM_WORKGROUPS) in;
 
@@ -43,6 +43,7 @@ uniform uint uNumSplats;
 uniform mat4 uView;
 uniform mat4 uProjection;
 uniform vec3 uCameraPos;
+uniform vec2 uTanFov;
 
 /** Calculates A such that the 3D Covariance matrix is equal to AA^T */
 mat3 A_3d(Splat splat) {
@@ -55,8 +56,9 @@ mat3 A_3d(Splat splat) {
 
 /** Calculates the Jacobian of the projection function at the given splat's position */
 mat3x2 jac(Splat splat, vec3 view_pos) {
-    view_pos.x = clamp(view_pos.x, -VIEW_XY_LIM, VIEW_XY_LIM);
-    view_pos.y = clamp(view_pos.y, -VIEW_XY_LIM, VIEW_XY_LIM);
+    vec2 lim = VIEW_XY_LIM * view_pos.xy * uTanFov;
+    view_pos.x = clamp(view_pos.x, -lim.x, lim.x);
+    view_pos.y = clamp(view_pos.y, -lim.y, lim.y);
 
     float inv_z = 1 / view_pos.z;
     mat3x2 jac;
@@ -80,7 +82,7 @@ void main() {
     if (idx >= uNumSplats) return;
 
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
-    if (view_pos.z > -0.3) return;
+    if (view_pos.z > -0.1) return;
 
     uint scr_idx = atomicAdd(draw_args.instanceCount, 1);
 

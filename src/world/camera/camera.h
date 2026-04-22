@@ -17,22 +17,24 @@ struct Camera {
     
     Transform transform;
 
-    /* Generate camera's view matrix */
+    /** Generate camera's view matrix */
     [[nodiscard]] glm::mat4 get_view_matrix() const;
-    /* Generate camera's projection matrix */
+    /** Generate camera's projection matrix */
     [[nodiscard]] glm::mat4 get_proj_matrix() const;
-    /* Generate camera's projection * view matrix */
+    /** Generate camera's projection * view matrix */
     [[nodiscard]] glm::mat4 get_vp_matrix() const;
 
-    /* Set then camera's background color */
+    /** Set then camera's background color */
     void set_background_color(const glm::vec4& color);
-    /* Retrieve the camera's background color */
+    /** Retrieve the camera's background color */
     [[nodiscard]] glm::vec4 get_background_color() const;
 
-    /* Set the camera's vertical FOV, in radians */
+    /** Set the camera's vertical FOV, in radians */
     void set_fovy(float fovy);
-    /* Retrieve the camera's vertical FOV, in radians */
+    /** Retrieve the camera's vertical FOV, in radians */
     [[nodiscard]] float get_fovy() const;
+    /** Retrieve vec2(tan(fovx/2), tan(fovy/2)) */
+    [[nodiscard]] glm::vec2 tan_fov() const;
 private:
     glm::vec4 m_background_color = glm::vec4(0.2f, 0.25f, 0.3f, 1.0f);
     /* Vertical FOV, in radians */

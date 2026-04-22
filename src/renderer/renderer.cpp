@@ -299,11 +299,14 @@ namespace Renderer {
         ImGui::Text(("Center of splat 0: " + glm::to_string(splat_ndc)).c_str());
         ImGui::End();
 
+        const Camera& main_camera = World::get_main_camera();
+
         use_program("project_splats");
-        g_activeProgram->set_mat4("uProjection", World::get_main_camera().get_proj_matrix());
-        g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
-        g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
+        g_activeProgram->set_mat4("uProjection", main_camera.get_proj_matrix());
+        g_activeProgram->set_mat4("uView", main_camera.get_view_matrix());
+        g_activeProgram->set_vec3("uCameraPos", main_camera.transform.position);
         g_activeProgram->set_uint("uNumSplats", g_num_splats);
+        g_activeProgram->set_vec2("uTanFov", main_camera.tan_fov());
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
@@ -313,10 +316,10 @@ namespace Renderer {
 
 
         use_program("render_splats");
-        g_activeProgram->set_mat4("uView", World::get_main_camera().get_view_matrix());
-        g_activeProgram->set_mat4("uProj", World::get_main_camera().get_proj_matrix());
-        g_activeProgram->set_vec3("uCameraPos", World::get_main_camera().transform.position);
-        g_activeProgram->set_vec3("uBackgroundColor", World::get_main_camera().get_background_color());
+        g_activeProgram->set_mat4("uView", main_camera.get_view_matrix());
+        g_activeProgram->set_mat4("uProj", main_camera.get_proj_matrix());
+        g_activeProgram->set_vec3("uCameraPos", main_camera.transform.position);
+        g_activeProgram->set_vec3("uBackgroundColor", main_camera.get_background_color());
 
         glBindVertexArray(g_emptyVAO);
         glDrawArraysIndirect(GL_TRIANGLE_STRIP, (void*)0);

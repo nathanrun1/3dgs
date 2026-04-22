@@ -85,6 +85,10 @@ void ShaderProgram::set_int(const std::string& uniform, const int &value) const 
     glUniform1i(glGetUniformLocation(m_id, uniform.c_str()), value);
 }
 
+void ShaderProgram::set_float(const std::string& uniform, const float &value) const {
+    glUniform1f(glGetUniformLocation(m_id, uniform.c_str()), value);
+}
+
 void ShaderProgram::set_mat4(const std::string& uniform, const glm::mat4 &value, GLboolean transpose) const {
     glUniformMatrix4fv(glGetUniformLocation(m_id, uniform.c_str()), 1, transpose, glm::value_ptr(value));
 }
