@@ -3,6 +3,13 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 
 The stack of this project is C++ and OpenGL
 
+# 2026-04-22
+A proper splat, no duplicate behind me (added depth culling to the compute shader). Also fixed an issue where the splat covered the screen if you look at around a 90 degree angle, this is due to the splat's x/y coordinate deviation being high as well as viewspace depth (distance along camera's axis) being low. Since the Jacobian only linearly approximates projection, it drastically overestimates the splat's actual extent on the screen, having it cover your screen as viewspace z approaches 0. So, you clamp the viewspace position used for the Jacobian calculation within some range of the view frustum to avoid the viewspace x/z or y/z becoming too large, which although inaccurate at grazing angles (which barely matters), fixes the issue unless you're unnecessarily close to the splat. Sick.
+Next up:
+- Multiple splats at once (will need Z sorting, ideally on the compute shader)
+- Actual SH rather than a solid color
+https://github.com/user-attachments/assets/ffa9edd4-2e27-49cb-8a6e-d3a042a9a83a
+
 # 2026-04-16
 ## 11PM
 OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK LFGG. Turns out you aren't supposed to normalize the bivariate normal p.d.f., i.e. you aren't supposed to use the p.d.f. directly as the opacity. My intuition wrongly assumed that the total radiance from the splat should be invariant with distance, but I forgot about the inverse square law. The total radiance per solid angle from the splat is proportional to r^2 (where r is distance to the splat), yes, but I forgot that the radiance received from that splat is proportional to 1/r^2, cancelling out that effect. So, we remove the `1/sqrt(determinant(cov))` normalization factor, and just use the transformed standard p.d.f.'s value as is. This way, the radiance (brightness) that we receive from any location on the splat does not vary with distance, just like irl.
