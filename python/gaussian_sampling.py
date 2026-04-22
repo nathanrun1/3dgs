@@ -29,6 +29,7 @@ def _diagonalize(matrix):
 
 
 rot_mat, scale_mat = _diagonalize(cov)
+scale_mat = np.sqrt(scale_mat)
 
 rot = R.from_matrix(rot_mat)
 print(rot.as_quat())
