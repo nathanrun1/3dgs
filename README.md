@@ -8,6 +8,7 @@ A proper splat, no duplicate behind me (added depth culling to the compute shade
 Next up:
 - Multiple splats at once (will need Z sorting, ideally on the compute shader)
 - Actual SH rather than a solid color
+
 https://github.com/user-attachments/assets/ffa9edd4-2e27-49cb-8a6e-d3a042a9a83a
 
 # 2026-04-16
