@@ -5,11 +5,17 @@ from plyfile import PlyData, PlyElement
 from scipy.spatial.transform import Rotation as R
 
 color = [1, 0, 0, 1]
-mean = [0, 0, 0]
-cov = [[1, 5, 0],
-       [5, 1, 5],
-       [0, 5, 1]]
-N = 10000
+mean = [5, 0, 0]
+
+corr = np.array([[1  , 0.5 , 0   ],
+                 [0.5, 1   , -0.5],
+                 [0  , -0.5, 1   ]])
+std = np.array([[.5, 0, 0],
+                [0, .5, 0],
+                [0, 0, .5]])
+
+cov = std @ corr @ std
+N = 100
 
 samples = np.random.multivariate_normal(mean, cov, N)
 
