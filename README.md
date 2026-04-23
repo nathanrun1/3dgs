@@ -3,6 +3,14 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 
 The stack of this project is C++ and OpenGL
 
+# 2026-04-23
+Sorted on the CPU, once. Looks inaccurate from the back, but with alpha blending and if I don't move, looks pretty good! This is a good reference until we add spherical harmonics.
+
+
+https://github.com/user-attachments/assets/847a1b9f-7489-45b3-a35b-6957abfedee3
+
+
+
 # 2026-04-22
 # 2
 Generated 100 random splats... this is what it looks like without any sorting. Also those grazing angle artifacts seem to come up again (notice the flashing).
