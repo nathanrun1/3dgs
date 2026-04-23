@@ -8,6 +8,7 @@
 
 #include "u_blocks.h"
 #include "assets/materials.h"
+#include "assets/splat.h"
 #include "backend/glfw_backend.h"
 #include "deprecated/texture2d.h"
 #include "glm/gtx/string_cast.hpp"
@@ -177,7 +178,9 @@ namespace Renderer {
     
     void _load_splats() {
         // Load splat data into splat buffer, binding = 1
-        std::span<const Assets::Splat> splats = Assets::get_splats();
+        std::span<const Assets::Splat> splats = Assets::get_splats_sorted(World::get_main_camera().get_view_matrix());
+        //std::span<const Assets::Splat> splats = Assets::get_splats();
+        std::cout << "Num splats: " << splats.size() << std::endl;
         std::vector<SSBSplat> ssb_splats{};
         ssb_splats.reserve(splats.size());
         for (const Assets::Splat& splat : splats) {
@@ -200,7 +203,6 @@ namespace Renderer {
         glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(SSBDrawArraysIndirectCommand), &cmd, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, g_splat_INDB);
     }
-
 
     void init() {
         std::string comp_path = Config::get_value(Config::ConfigGroup::Shaders, "shaders", "comp");
@@ -244,6 +246,8 @@ namespace Renderer {
         // _init_materials();
         
         glDisable(GL_DEPTH_TEST);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
     void begin_draw() {
@@ -290,14 +294,16 @@ namespace Renderer {
     }
 
     void draw_splats() {
+        //_load_splats();
+
         const int NUM_WORKGROUPS = 256;
 
         // TESTING:
-        ImGui::Begin("Splats");
-        glm::vec4 splat_screenspace = World::get_main_camera().get_proj_matrix() * World::get_main_camera().get_view_matrix() * glm::vec4(Assets::get_splats()[0].position, 1.0);
-        glm::vec2 splat_ndc = glm::vec2(splat_screenspace.x, splat_screenspace.y) / splat_screenspace.w;
-        ImGui::Text(("Center of splat 0: " + glm::to_string(splat_ndc)).c_str());
-        ImGui::End();
+        // ImGui::Begin("Splats");
+        // glm::vec4 splat_screenspace = World::get_main_camera().get_proj_matrix() * World::get_main_camera().get_view_matrix() * glm::vec4(Assets::get_splats()[0].position, 1.0);
+        // glm::vec2 splat_ndc = glm::vec2(splat_screenspace.x, splat_screenspace.y) / splat_screenspace.w;
+        // ImGui::Text(("Center of splat 0: " + glm::to_string(splat_ndc)).c_str());
+        // ImGui::End();
 
         const Camera& main_camera = World::get_main_camera();
 

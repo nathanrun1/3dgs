@@ -82,9 +82,10 @@ void main() {
     if (idx >= uNumSplats) return;
 
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
-    if (view_pos.z > -0.1) return;
+    if (view_pos.z > -0.3) return;
 
-    uint scr_idx = atomicAdd(draw_args.instanceCount, 1);
+    uint scr_idx = idx;
+    atomicAdd(draw_args.instanceCount, 1);
 
     mat2 cov = cov_2d(splats[idx], view_pos);
 

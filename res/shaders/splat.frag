@@ -25,5 +25,6 @@ void main() {
     mat2 cov = screen_splats[splatIndex].cov;
     //fragColor = vec4(1.0) * bivariate_pdf(vOffset, cov);
     float pdf = unnormalized_bivariate_pdf(vOffset, cov);
-    fragColor = vec4(mix(uBackgroundColor, screen_splats[splatIndex].color.rgb, pdf), pdf);
+    //fragColor = vec4(mix(uBackgroundColor, screen_splats[splatIndex].color.rgb, pdf), pdf);
+    fragColor = mix(vec4(uBackgroundColor, 0.0), vec4(screen_splats[splatIndex].color.rgb, 1.0), pdf);
 }

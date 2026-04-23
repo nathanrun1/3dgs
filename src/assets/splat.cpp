@@ -4,9 +4,11 @@
 #include <glm/gtx/io.hpp>
 #include <happly.h>
 #include <span>
+#include <algorithm>
 
 namespace Assets {
     std::vector<Splat> g_splats;
+    std::vector<Splat> g_splats_sorted;
     
     void load_splats(const std::string& ply_file) {
         happly::PLYData plyIn{ply_file};
@@ -44,6 +46,16 @@ namespace Assets {
     
     std::span<const Splat> get_splats() {
         return std::span(g_splats);
+    }
+
+    std::span<const Splat> get_splats_sorted(const glm::mat4& view_mat) {
+        g_splats_sorted = g_splats;
+        std::sort(g_splats_sorted.begin(), g_splats_sorted.end(), [&view_mat](const Splat& a, const Splat& b) {
+            glm::vec3 view_a = glm::xyz(view_mat * glm::vec4(a.position, 1.0));
+            glm::vec3 view_b = glm::xyz(view_mat * glm::vec4(b.position, 1.0));
+            return view_a.z < view_b.z; // Camera looks down negative z
+        });
+        return std::span(g_splats_sorted);
     }
 }
 

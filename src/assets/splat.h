@@ -19,6 +19,9 @@ namespace Assets {
 
     /** Retrieves the list of splats to be rendered in the scene */
     std::span<const Splat> get_splats();
+
+    /** Retrieves the list of splats, sorted ascending by viewspace z, to be rendered in the scene */
+    std::span<const Splat> get_splats_sorted(const glm::mat4& view_mat);
 }
 
 
