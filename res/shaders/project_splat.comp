@@ -6,7 +6,7 @@
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
 #define NUM_WORKGROUPS 256
-#define VIEW_XY_LIM 0.3
+#define VIEW_XY_LIM 3.0
 
 layout (local_size_x = NUM_WORKGROUPS) in;
 
@@ -56,7 +56,7 @@ mat3 A_3d(Splat splat) {
 
 /** Calculates the Jacobian of the projection function at the given splat's position */
 mat3x2 jac(Splat splat, vec3 view_pos) {
-    vec2 lim = VIEW_XY_LIM * view_pos.xy * uTanFov;
+    vec2 lim = abs(VIEW_XY_LIM * view_pos.z * uTanFov);
     view_pos.x = clamp(view_pos.x, -lim.x, lim.x);
     view_pos.y = clamp(view_pos.y, -lim.y, lim.y);
 
