@@ -7,5 +7,6 @@
     <option name="pythonIntegrationState" value="YES" />
   </component>
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
-  <component name="WestSettings"><![CDATA[{}]]></component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="uv (3dgs)" project-jdk-type="Python SDK" />
+  <component name="WestSettings">{}</component>
 </project>

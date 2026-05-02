@@ -1,4 +1,5 @@
-﻿from dataclasses import dataclass
+﻿import argparse
+from dataclasses import dataclass
 
 import numpy as np
 import json
@@ -64,21 +65,24 @@ def _rand_splat(min_pos: np.ndarray = np.repeat(-5.0, 3), max_pos: np.ndarray = 
     )
 
 
-NUM_SPLATS = 100
-NUM_SAMPLES = 0
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--num-splats", "-p", help="Amount of splats to generate", type=int, default=100)
+    parser.add_argument("--num-samples", "-s", help="Amount of samples to generate per splat", type=int, default=0)
+    args = parser.parse_args()
 
-splats: list[Splat] = [_rand_splat() for _ in range(NUM_SPLATS)]
-
-if NUM_SAMPLES > 0:
-    samples = np.concatenate([s.sample() for s in splats])
-    with open("../res/data/samples.json", "w") as f:
-        f.write(json.dumps(samples.tolist(), indent=4))
-
-splat_data = np.array([s.ply_tuple() for s in splats],
-                  dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'),
-                         ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4'), ('r', 'f4'), ('g', 'f4'),
-                         ('b', 'f4'), ('a', 'f4')])
-
-e1 = PlyElement.describe(splat_data, 'splat')
-
-PlyData([e1], text=True).write("../res/data/splat.ply")
+    splats: list[Splat] = [_rand_splat() for _ in range(args.num_splats)]
+    
+    if args.num_samples > 0:
+        samples = np.concatenate([s.sample(args.num_samples) for s in splats])
+        with open("../res/data/samples.json", "w") as f:
+            f.write(json.dumps(samples.tolist(), indent=4))
+    
+    splat_data = np.array([s.ply_tuple() for s in splats],
+                      dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'),
+                             ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4'), ('r', 'f4'), ('g', 'f4'),
+                             ('b', 'f4'), ('a', 'f4')])
+    
+    e1 = PlyElement.describe(splat_data, 'splat')
+    
+    PlyData([e1], text=True).write("../res/data/splat.ply")

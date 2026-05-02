@@ -318,8 +318,7 @@ namespace Renderer {
         glm::uint zero = 0;
         glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);
         glDispatchCompute((g_num_splats + NUM_WORKGROUPS - 1) / NUM_WORKGROUPS, 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT & GL_COMMAND_BARRIER_BIT);
-
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
         use_program("render_splats");
         g_activeProgram->set_mat4("uView", main_camera.get_view_matrix());
