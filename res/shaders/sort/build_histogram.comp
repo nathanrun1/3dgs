@@ -1,0 +1,57 @@
+#version 460
+#extension GL_ARB_gpu_shader_int64 : enable
+
+#define BLOCK_SIZE 256
+#define DIGIT_SIZE 8  // d: Bits per digit (radix)
+#define NUM_DIGITS 256 // Equal to 2^d
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+struct KV {
+    uint64_t key;
+    uint value;
+};
+
+layout (std430, binding = 0) buffer Keys {
+    KV keys[];
+};
+
+layout (std430, binding = 0) buffer Histogram {
+    uint frequencies[];
+};
+
+shared uint local_frequencies[NUM_DIGITS];
+
+uniform uint uNumBlocks;
+uniform uint uDigitId;
+
+uint histogram_index(uint block_id, uint digit) {
+    return digit * uNumBlocks + block_id;
+}
+
+uint key_index(uint block_id, uint offset) {
+    return block_id * BLOCK_SIZE + offset;
+}
+
+uint digit_value() {
+    uint key = keys[key_index(gl_WorkGroupID.x, gl_InvocationID)];
+    uint mask = ((1 << DIGIT_SIZE) - 1) << (uDigitId * DIGIT_SIZE);
+    return (key & mask) >> (uDigitId * DIGIT_SIZE);
+}
+
+void main() {
+    uint tid = gl_InvocationID;
+    
+    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
+    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
+    
+    atomicAdd(local_frequencies[digit_value()], 1);
+    barrier();
+
+    // Each thread writes final result of same bin(s) it initialized
+    frequencies[tid * uNumBlocks + gl_WorkGroupID.x] = local_frequencies[tid];
+    
+    // We write to local frequencies in a first pass, and then write the results to the global histogram after
+    //   This avoids atomic operations to DRAM (global memory), which are generally slower.
+    //   Comes at the cost of thread sync, so that's the tradeoff, but probably ok idk
+}
