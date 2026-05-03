@@ -1,8 +1,0 @@
-#version 460
-
-#define NUM_THREADS 256
-
-// Blelloch prefix scan
-//   Algorithm retrieved from: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
-
-layout (local_size_x = NUM_THREADS);

@@ -1,0 +1,53 @@
+#version 460
+
+#define NUM_THREADS 256
+#define LOCAL_ARR_SIZE 512  // = 2 * NUM_THREADS
+#define NUM_STRIDES 8       // = log_2(NUM_THREADS)
+
+// Exclusive Blelloch prefix scan - top level upsweep and downsweep
+//   Algorithm retrieved from: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+
+layout (local_size_x = NUM_THREADS) in;
+
+layout (std430, binding = 1) buffer Histogram {
+    uint frequencies[];
+};
+
+uniform uint uBaseStride;  // Corresponding stride in global array of indices in local array
+
+void main() {
+    uint wid = gl_WorkGroupID.x;
+    uint tid = 2 * gl_InvocationID + 1;
+    
+    uint arr[LOCAL_ARR_SIZE];
+    uint offset = wid * uBaseStride * NUM_THREADS;
+    arr[2 * tid] = frequencies[tid * uBaseStride + offset];
+    arr[2 * tid + 1] = frequencies[(tid - 1) * uBaseStride + offset];
+    barrier();
+
+    // Upsweep
+    //   Right-most node of subsection stores sum of entire subsection.
+    for (uint stride = 1; ((tid + 1) / 2) % stride == 0; stride << 1) {
+        arr[tid] = arr[tid] + arr[tid - stride];
+        barrier();
+    }
+    barrier();
+    
+    arr[LOCAL_ARR_SIZE - 1] = 0; // 0 is the prefix of the entire array, so root starts with 0
+    
+    // Downsweep
+    //   Root starts by storing prefix of its section. Sets right half root to prefix of right half (left half sum + itself), 
+    //   left half root to prefix of left half (i.e. prefix of entire section, itself). Once you get to the leaf nodes,
+    //   the prefixes are accurate down to each element.
+    for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >> 1) {
+        if (((tid + 1) / 2) % stride != 0) continue;
+        uint temp = arr[tid];
+        arr[tid] = arr[tid] + arr[tid - stride];
+        arr[tid - stride] = temp;
+        barrier();
+    }
+    barrier();
+
+    frequencies[tid * uBaseStride + offset] = arr[tid];
+    frequencies[(tid - 1) * uBaseStride + offset] = arr[tid - 1];
+}
