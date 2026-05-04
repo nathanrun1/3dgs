@@ -13,28 +13,29 @@ layout (std430, binding = 1) buffer Histogram {
     uint frequencies[];
 };
 
+shared uint local[LOCAL_ARR_SIZE];
+
 uniform uint uBaseStride;
 
 void main() {
     uint wid = gl_WorkGroupID.x;
     uint tid = 2 * gl_InvocationID + 1;
     
-    uint arr[LOCAL_ARR_SIZE];
     uint offset = wid * uBaseStride * NUM_THREADS;
-    arr[2 * tid] = frequencies[tid * uBaseStride + offset];
-    arr[2 * tid + 1] = frequencies[(tid - 1) * uBaseStride + offset];
+    local[2 * tid] = frequencies[tid * uBaseStride + offset];
+    local[2 * tid + 1] = frequencies[(tid - 1) * uBaseStride + offset];
     barrier();
     
     // Downsweep
     for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >> 1) {
         if (((tid + 1) / 2) % stride != 0) continue;
-        uint temp = arr[tid];
-        arr[tid] = arr[tid] + arr[tid - stride];
-        arr[tid - stride] = temp;
+        uint temp = local[tid];
+        local[tid] = local[tid] + local[tid - stride];
+        local[tid - stride] = temp;
         barrier();
     }
     barrier();
 
-    frequencies[tid * uBaseStride + offset] = arr[tid];
-    frequencies[(tid - 1) * uBaseStride + offset] = arr[tid - 1];
+    frequencies[tid * uBaseStride + offset] = local[tid];
+    frequencies[(tid - 1) * uBaseStride + offset] = local[tid - 1];
 }

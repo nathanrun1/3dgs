@@ -1,6 +1,8 @@
 #version 460
 #extension GL_ARB_gpu_shader_int64 : enable
 
+#include "sort/common.comp"
+
 #define BLOCK_SIZE 256
 #define DIGIT_SIZE 8  // d: Bits per digit (radix)
 #define NUM_DIGITS 256 // Equal to 2^d
@@ -25,31 +27,34 @@ shared uint local_frequencies[NUM_DIGITS];
 uniform uint uNumBlocks;
 uniform uint uDigitId;
 
-uint histogram_index(uint block_id, uint digit) {
-    return digit * uNumBlocks + block_id;
-}
-
-uint key_index(uint block_id, uint offset) {
-    return block_id * BLOCK_SIZE + offset;
-}
-
-uint digit_value() {
-    uint key = keys[key_index(gl_WorkGroupID.x, gl_InvocationID)];
-    uint mask = ((1 << DIGIT_SIZE) - 1) << (uDigitId * DIGIT_SIZE);
-    return (key & mask) >> (uDigitId * DIGIT_SIZE);
-}
+//uint histogram_index(uint block_id, uint digit) {
+//    return digit * uNumBlocks + block_id;
+//}
+//
+//uint key_index(uint block_id, uint offset) {
+//    return block_id * BLOCK_SIZE + offset;
+//}
+//
+//uint digit_value() {
+//    uint key = keys[key_index(gl_WorkGroupID.x, gl_InvocationID)];
+//    uint mask = ((1 << DIGIT_SIZE) - 1) << (uDigitId * DIGIT_SIZE);
+//    return (key & mask) >> (uDigitId * DIGIT_SIZE);
+//}
 
 void main() {
+    uint wid = gl_WorkGroupID.x;
     uint tid = gl_InvocationID;
     
     local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
     barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
     
-    atomicAdd(local_frequencies[digit_value()], 1);
+    uint key = keys[key_index(wid, tid, BLOCK_SIZE)];
+    uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
+    atomicAdd(local_frequencies[digit], 1);
     barrier();
 
     // Each thread writes final result of same bin(s) it initialized
-    frequencies[tid * uNumBlocks + gl_WorkGroupID.x] = local_frequencies[tid];
+    frequencies[tid * uNumBlocks + wid] = local_frequencies[tid];
     
     // We write to local frequencies in a first pass, and then write the results to the global histogram after
     //   This avoids atomic operations to DRAM (global memory), which are generally slower.

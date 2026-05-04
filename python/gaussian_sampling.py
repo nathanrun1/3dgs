@@ -26,9 +26,7 @@ class Splat:
         """Generates a tuple laying out the splat's data in the same format as it would be placed in a .ply file"""
         rot_mat, scale_mat = _diagonalize(self.cov)
         scale_mat = np.sqrt(scale_mat)
-        print(f"rot: {rot_mat}\nscale: {scale_mat}")
         rot = R.from_matrix(rot_mat, assume_valid=True)
-        print(self.color)
         return tuple(np.concat([self.position, rot.as_quat().tolist(), np.diag(scale_mat).tolist(), self.color]))
         return tuple(self.position + rot.as_quat().tolist() + np.diag(scale_mat).tolist() + self.color)
 
@@ -42,21 +40,18 @@ def _rand_cov(std_range = (0.1, 0.5)) -> np.ndarray:
     """Generates a random 3D covariance matrix, with stdev for each axis generated between the given range"""
     low, high = std_range
     stds = np.random.uniform(low, high, 3)
-    print("stds: " + str(stds))
 
     eigs = np.random.dirichlet(np.ones(3)) * 3
     corr = random_correlation.rvs(eigs)
 
-    print("corr: " + str(corr))
 
     D = np.diag(stds)
     cov = D @ corr @ D
-    print("cov: " + str(cov))
 
     return cov
 
 
-def _rand_splat(min_pos: np.ndarray = np.repeat(-5.0, 3), max_pos: np.ndarray = np.repeat(5.0, 3), std_range = (0.1, 0.5)) -> Splat:
+def _rand_splat(min_pos: np.ndarray = np.repeat(-50.0, 3), max_pos: np.ndarray = np.repeat(50.0, 3), std_range = (0.1, 0.5)) -> Splat:
     """Generates a random 3D Gaussian Splat"""
     return Splat(
         position=np.random.uniform(min_pos, max_pos),

@@ -1,0 +1,46 @@
+﻿#version 460
+#extension GL_ARB_gpu_shader_int64 : enable
+
+#include "sort/common.comp"
+
+#define BLOCK_SIZE 256
+#define DIGIT_SIZE 8  // d: Bits per digit (radix)
+#define NUM_DIGITS 256 // Equal to 2^d
+
+layout (local_size_x = BLOCK_SIZE) in;
+
+struct KV {
+    uint64_t key;
+    uint value;
+};
+
+layout (std430, binding = 0) buffer Keys {
+    KV keys[];
+};
+
+layout (std430, binding = 0) buffer Histogram {
+    uint frequencies[];
+};
+
+shared uint local_frequencies[NUM_DIGITS];
+shared uint local_keys[BLOCK_SIZE];
+shared uint temp_keys[BLOCK_SIZE];
+
+uniform uint uNumBlocks;
+uniform uint uDigitId;
+
+void main() {
+    uint tid = gl_InvocationID;
+    uint wid = gl_WorkGroupID.x;
+    local_keys[tid] = keys[key_index(wid, tid, BLOCK_SIZE)];
+    barrier();
+
+    // LDS radix sort per bit
+    for (uint i = 0; i < DIGIT_SIZE; ++i) {
+        // Get key from thread ID, from current buffer (swaps each step)
+        // Decode: construct a 2N-sized array containing 1s at each 0 pos in first half, and then 1s at each 1 pos in second half
+        // Scan: Hillis-Steele prefix scan on it
+        // Scatter: Use initial key indices and the new array to place keys into second buffer
+        // Repeat for next digit up
+    }
+}

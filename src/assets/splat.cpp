@@ -37,10 +37,10 @@ namespace Assets {
                 {s0[i], s1[i], s2[i]},
                 {r[i], g[i], b[i], a[i]}
             });
-            std::cout << "Loading splat:\n\tPosition: " << g_splats.back().position
-            << "\n\tRotation: " << g_splats.back().rotation
-            << "\n\tScale: " << g_splats.back().scale
-            << "\n\tColor: " << g_splats.back().color << std::endl;
+            // std::cout << "Loading splat:\n\tPosition: " << g_splats.back().position
+            // << "\n\tRotation: " << g_splats.back().rotation
+            // << "\n\tScale: " << g_splats.back().scale
+            // << "\n\tColor: " << g_splats.back().color << std::endl;
         }
     }
     
