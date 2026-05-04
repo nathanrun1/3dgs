@@ -41,6 +41,10 @@ namespace Renderer {
     unsigned int g_num_splats;
     unsigned int g_splat_INDB;
 
+    unsigned int g_in_keysSSBO;
+    unsigned int g_out_keysSSBO;
+    unsigned int g_histogramSSBO;
+
     unsigned int g_emptyVAO;
 
 

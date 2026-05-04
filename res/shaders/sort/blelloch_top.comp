@@ -1,8 +1,8 @@
 #version 460
 
-#define NUM_THREADS 256
-#define LOCAL_ARR_SIZE 512  // = 2 * NUM_THREADS
-#define NUM_STRIDES 8       // = log_2(NUM_THREADS)
+#define NUM_THREADS 256u
+#define LOCAL_ARR_SIZE 512u  // = 2 * NUM_THREADS
+#define NUM_STRIDES 8u       // = log_2(NUM_THREADS)
 
 // Exclusive Blelloch prefix scan - top level upsweep and downsweep
 //   Algorithm retrieved from: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda

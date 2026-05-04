@@ -2,6 +2,8 @@
 #define STB_INCLUDE_LINE_GLSL
 
 #include "utils/quat.glsl"
+#include "utils/projection.glsl"
+#include "common/sorting.glsl"
 
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
@@ -38,6 +40,10 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
     uint first;
     uint baseInstance;
 } draw_args;
+
+layout (std430, binding = 3) writeonly buffer Keys {
+    KV keys[];
+};
 
 uniform uint uNumSplats;
 uniform mat4 uView;
@@ -101,5 +107,11 @@ void main() {
 
     // Screen-space quad vertex offsets
     screen_splats[scr_idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
+
+    // Depth is key to sort by
+    KV kv;
+    kv.key = floatBitsToUint(clip.z); // finally found a use for this function lol
+    kv.value = scr_idx;
+    keys[scr_idx] = kv;
 }
 
