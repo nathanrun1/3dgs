@@ -47,7 +47,6 @@ void main() {
         local[tid - stride] = temp;
         barrier();
     }
-    barrier();
 
     frequencies[tid * uBaseStride + offset] = local[tid];
     frequencies[(tid - 1) * uBaseStride + offset] = local[tid - 1];

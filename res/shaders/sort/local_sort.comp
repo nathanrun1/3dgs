@@ -14,17 +14,25 @@ struct KV {
     uint value;
 };
 
-layout (std430, binding = 0) buffer Keys {
+layout (std430, binding = 0) readonly buffer Keys {
     KV keys[];
 };
 
-layout (std430, binding = 0) buffer Histogram {
+layout (std430, binding = 1) readonly buffer Histogram {
     uint frequencies[];
 };
 
-shared uint local_frequencies[NUM_DIGITS];
-shared uint local_keys[BLOCK_SIZE];
-shared uint temp_keys[BLOCK_SIZE];
+layout (std430, binding = 2) writeonly buffer Keys {
+    KV result_keys[];
+};
+
+shared uint decode_A[BLOCK_SIZE * 2];
+shared uint decode_B[BLOCK_SIZE * 2];
+
+shared KV lkeys_A[BLOCK_SIZE];
+shared KV lkeys_B[BLOCK_SIZE];
+
+shared uint digit_offset[NUM_DIGITS];
 
 uniform uint uNumBlocks;
 uniform uint uDigitId;
@@ -32,15 +40,59 @@ uniform uint uDigitId;
 void main() {
     uint tid = gl_InvocationID;
     uint wid = gl_WorkGroupID.x;
-    local_keys[tid] = keys[key_index(wid, tid, BLOCK_SIZE)];
+    lkeys_A[tid] = keys[key_index(wid, tid, BLOCK_SIZE)];
     barrier();
 
-    // LDS radix sort per bit
+    // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
-        // Get key from thread ID, from current buffer (swaps each step)
-        // Decode: construct a 2N-sized array containing 1s at each 0 pos in first half, and then 1s at each 1 pos in second half
-        // Scan: Hillis-Steele prefix scan on it
-        // Scatter: Use initial key indices and the new array to place keys into second buffer
-        // Repeat for next digit up
+        uint key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+        uint bit = (key & (1 << i)) >> i;
+
+        // Decode 0-bit and 1-bit element positions
+        decode_A[tid] = 1 - bit;
+        decode_A[BLOCK_SIZE + tid] = bit;
+        barrier();
+
+        // Hillis-Steele inclusive prefix scan
+        for (uint stride = 1; stride < (BLOCK_SIZE * 2); stride << 1) {
+            if (findLSB(stride) % 2 == 0) {
+                decode_B[tid] = decode_A[tid] + decode_A[tid - stride];
+                decode_B[BLOCK_SIZE + tid] = decode_A[BLOCK_SIZE + tid] - decode_A[BLOCK_SIZE + tid - stride];
+            } else {
+                decode_A[tid] = decode_B[tid] + decode_B[tid - stride];
+                decode_A[BLOCK_SIZE + tid] = decode_B[BLOCK_SIZE + tid] - decode_B[BLOCK_SIZE + tid - stride];
+            }
+            barrier();
+        }
+
+        // Use prefix scan value at corresponding position to rearrange (scatter)
+        //   Shift decode one to the right when retrieving values to convert to exclusive scan
+        uint local_index;
+        if (findLSB(BLOCK_SIZE * 2) % 2 == 0) {
+            local_index = (tid == 0) ? 0 : (bit ? decode_A[BLOCK_SIZE + tid - 1] : decode_A[tid - 1]);
+        } else {
+            local_index = (tid == 0) ? 0 : (bit ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1]);
+        }
+
+        if (i % 2 == 0) {
+            lkeys_B[local_index] = key;
+        } else {
+            lkeys_A[local_index] = key;
+        }
+        barrier();
     }
+
+    // Get minimum index of keys for each digit, used to construct local offset
+    uint key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+    uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
+    digit_offset[tid] = 0xFFFFFFFFu;
+    barrier();
+    atomicMin(digit_offset[digit], tid);
+    barrier();
+
+
+    // Write to final sorted position (for the current digit)
+    uint global_offset = frequencies[histogram_index(wid, digit, uNumBlocks)];
+    uint local_offset = tid - digit_offset[digit];
+    result_keys[global_offset + local_offset] = key;
 }

@@ -18,7 +18,7 @@ layout (std430, binding = 0) buffer Keys {
     KV keys[];
 };
 
-layout (std430, binding = 0) buffer Histogram {
+layout (std430, binding = 1) buffer Histogram {
     uint frequencies[];
 };
 
@@ -26,20 +26,6 @@ shared uint local_frequencies[NUM_DIGITS];
 
 uniform uint uNumBlocks;
 uniform uint uDigitId;
-
-//uint histogram_index(uint block_id, uint digit) {
-//    return digit * uNumBlocks + block_id;
-//}
-//
-//uint key_index(uint block_id, uint offset) {
-//    return block_id * BLOCK_SIZE + offset;
-//}
-//
-//uint digit_value() {
-//    uint key = keys[key_index(gl_WorkGroupID.x, gl_InvocationID)];
-//    uint mask = ((1 << DIGIT_SIZE) - 1) << (uDigitId * DIGIT_SIZE);
-//    return (key & mask) >> (uDigitId * DIGIT_SIZE);
-//}
 
 void main() {
     uint wid = gl_WorkGroupID.x;
