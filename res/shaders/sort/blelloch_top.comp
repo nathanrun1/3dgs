@@ -28,11 +28,12 @@ void main() {
 
     // Upsweep
     //   Right-most node of subsection stores sum of entire subsection.
-    for (uint stride = 1; ((tid + 1) / 2) % stride == 0; stride << 1) {
-        local[tid] = local[tid] + local[tid - stride];
+    for (uint stride = 1; stride < LOCAL_ARR_SIZE; stride << 1) {
+        if (((tid + 1) / 2) % stride == 0) {
+            local[tid] = local[tid] + local[tid - stride];
+        }
         barrier();
     }
-    barrier();
     
     local[LOCAL_ARR_SIZE - 1] = 0; // 0 is the prefix of the entire array, so root starts with 0
     
@@ -41,10 +42,11 @@ void main() {
     //   left half root to prefix of left half (i.e. prefix of entire section, itself). Once you get to the leaf nodes,
     //   the prefixes are accurate down to each element.
     for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >> 1) {
-        if (((tid + 1) / 2) % stride != 0) continue;
-        uint temp = local[tid];
-        local[tid] = local[tid] + local[tid - stride];
-        local[tid - stride] = temp;
+        if (((tid + 1) / 2) % stride == 0) {
+            uint temp = local[tid];
+            local[tid] = local[tid] + local[tid - stride];
+            local[tid - stride] = temp;
+        }
         barrier();
     }
 

@@ -28,10 +28,11 @@ void main() {
     
     // Downsweep
     for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >> 1) {
-        if (((tid + 1) / 2) % stride != 0) continue;
-        uint temp = local[tid];
-        local[tid] = local[tid] + local[tid - stride];
-        local[tid - stride] = temp;
+        if (((tid + 1) / 2) % stride == 0) {
+            uint temp = local[tid];
+            local[tid] = local[tid] + local[tid - stride];
+            local[tid - stride] = temp;
+        }
         barrier();
     }
 
