@@ -3,6 +3,17 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 
 The stack of this project is C++ and OpenGL
 
+# 2026-05-04
+Nothing visual to show atm, but wanted to update. Implemented full draft on GPU side (all of the compute shaders) for the GPU radix sort. Implementation:
+- 5 new buffers: Two key buffers, two value buffers, one histogram buffer.
+- Splat projection compute shader writes splat depths as keys to key buffer A, and splat indices as the corresponding values to value buffer A
+- For each digit (I chose 8 bits as digit size):
+  - Initial histogram pass counts local frequency of each possible digit, writes to global histogram arranged digit-major, block-minor (block is a group of keys assigned to a compute shader workgroup, conveniently the same size as the amount of digits, i.e. 256)
+  - Run [Blelloch prefix scan](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda#:~:text=A%20Work%2DEfficient%20Parallel%20Scan) over the global histogram. This determines, for each block, the global offset of each digit within that block.
+  - Run local radix sort (using Hillis-Steele prefix scan) on keys within each block according to digit. Then, add each key's offset within its digit to the global offset for its block and digit, use that as the index of its new position in the output key buffer.
+
+Still working on the CPU side, a bit more complicated than expected because I need the amount of Blelloch upsweeps/downsweeps to adjust to the histogram size, which itself is dependent on splat count.
+
 # 2026-04-23
 Sorted on the CPU, once. Looks inaccurate from the back, but with alpha blending and if I don't move, looks pretty good! This is a good reference until we add spherical harmonics.
 
@@ -26,6 +37,9 @@ Next up:
 - Actual SH rather than a solid color
 
 https://github.com/user-attachments/assets/ffa9edd4-2e27-49cb-8a6e-d3a042a9a83a
+
+# 2026-05-04
+Nothing visual to show, just wanted to indicate that GPU radix sort is fully drafted, in the shaders at least. Currently implementing the CPU side, which is a little complicated as well since I want to make it support an arbitrarily high splat count, so I gotta adapt the amount of [Blelloch](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda#:~:text=A%20Work%2DEfficient%20Parallel%20Scan) upsweeps/downsweeps based on how large the histogram is.
 
 # 2026-04-16
 ## 11PM

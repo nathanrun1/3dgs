@@ -3,20 +3,17 @@
 
 #include "common/sorting.glsl"
 
-// (COMMENT OUT) relative path for Intellisense:
-#include "../common/sorting.glsl"
-
-#define BLOCK_SIZE 256u
-#define DIGIT_SIZE 8u  // d: Bits per digit (radix)
-#define NUM_DIGITS 256u // Equal to 2^d
+#define BLOCK_SIZE 256
+#define DIGIT_SIZE 8  // d: Bits per digit (radix)
+#define NUM_DIGITS 256 // Equal to 2^d
 
 layout (local_size_x = BLOCK_SIZE) in;
 
-layout (std430, binding = 0) readonly buffer Keys {
-    KV keys[];
+layout (std430, binding = 3) readonly buffer Keys {
+    uint64_t keys[];
 };
 
-layout (std430, binding = 1) buffer Histogram {
+layout (std430, binding = 7) buffer Histogram {
     uint frequencies[];
 };
 
@@ -27,18 +24,18 @@ uniform uint uDigitId;
 
 void main() {
     uint wid = gl_WorkGroupID.x;
-    uint tid = gl_InvocationID;
+    uint tid = gl_LocalInvocationID.x;
     
-    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
-    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
+//    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
+//    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
     
-    KV key = keys[key_index(wid, tid, BLOCK_SIZE)];
+    uint64_t key = keys[key_index(wid, tid, BLOCK_SIZE)];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     atomicAdd(local_frequencies[digit], 1);
     barrier();
 
     // Each thread writes final result of same bin(s) it initialized
-    frequencies[tid * uNumBlocks + wid] = local_frequencies[tid];
+    frequencies[histogram_index(wid, digit, uNumBlocks)] = local_frequencies[tid];
     
     // We write to local frequencies in a first pass, and then write the results to the global histogram after
     //   This avoids atomic operations to DRAM (global memory), which are generally slower.

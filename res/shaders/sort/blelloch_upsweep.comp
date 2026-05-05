@@ -1,15 +1,17 @@
 #version 460
 
-#define NUM_THREADS 256u
-#define LOCAL_ARR_SIZE 512u  // = 2 * NUM_THREADS
-#define NUM_STRIDES 8u       // = log_2(NUM_THREADS)
+#include "common/scanning.glsl"
+
+#define NUM_THREADS 256
+#define LOCAL_ARR_SIZE 512  // = 2 * NUM_THREADS
+#define NUM_STRIDES 8       // = log_2(NUM_THREADS)
 
 // Exclusive Blelloch prefix scan - upsweep
 //   Algorithm retrieved from: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
 
 layout (local_size_x = NUM_THREADS) in;
 
-layout (std430, binding = 1) buffer Histogram {
+layout (std430, binding = 7) buffer Histogram {
     uint frequencies[];
 };
 
@@ -19,11 +21,10 @@ uniform uint uBaseStride;
 
 void main() {
     uint wid = gl_WorkGroupID.x;
-    uint tid = 2 * gl_InvocationID + 1;
+    uint tid = 2 * gl_LocalInvocationID.x + 1;
     
-    uint offset = wid * uBaseStride * NUM_THREADS;
-    local[tid] = frequencies[tid * uBaseStride + offset];
-    local[tid - 1] = frequencies[(tid - 1) * uBaseStride + offset];
+    local[tid] = histogram_index(tid, wid, NUM_THREADS, uBaseStride);
+    local[tid - 1] = histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride);
     barrier();
     
     // Upsweep
@@ -34,6 +35,6 @@ void main() {
         barrier();
     }
 
-    frequencies[tid * uBaseStride + offset] = local[tid];
-    frequencies[(tid - 1) * uBaseStride + offset] = local[tid - 1];
+    frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)] = local[tid];
+    frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)] = local[tid - 1];
 }
