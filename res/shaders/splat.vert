@@ -1,5 +1,7 @@
 #version 460
 
+#include "common/sorting.glsl"
+
 struct ScreenSplat {
     vec2 center;
     mat2 cov;
@@ -9,6 +11,10 @@ struct ScreenSplat {
 
 layout (std430, binding = 0) readonly buffer ScreenSplats {
     ScreenSplat screen_splats[];
+};
+
+layout (std430, binding = 1) readonly buffer Keys {
+    KV keys[];
 };
 
 vec2 my_offsets[4] = {vec2(1.0), vec2(-1.0, 1.0), vec2(-1.0), vec2(1.0, -1.0)};
@@ -21,7 +27,7 @@ flat out uint splatIndex;
 out vec2 vOffset;
 
 void main() {
-    splatIndex = gl_InstanceID;
+    splatIndex = keys[gl_InstanceID].value;
     vOffset = screen_splats[splatIndex].offsets[gl_VertexID];
     //vOffset = my_offsets[gl_VertexID];
 
