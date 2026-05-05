@@ -9,23 +9,34 @@
 
 layout (local_size_x = BLOCK_SIZE) in;
 
-layout (std430, binding = 0) readonly buffer Keys {
-    KV keys[];
+layout (std430, binding = 3) readonly buffer KeysIn {
+    uint64_t keys_in[];
+};
+layout (std430, binding = 4) writeonly buffer KeysOut {
+    uint64_t keys_out[];
 };
 
-layout (std430, binding = 1) readonly buffer Histogram {
+layout (std430, binding = 5) readonly buffer ValuesIn {
+    uint values_in[];
+};
+layout (std430, binding = 6) readonly buffer ValuesOut {
+    uint values_out[];
+};
+
+layout (std430, binding = 7) readonly buffer Histogram {
     uint frequencies[];
 };
 
-layout (std430, binding = 2) writeonly buffer Keys {
-    KV result_keys[];
-};
+
 
 shared uint decode_A[BLOCK_SIZE * 2];
 shared uint decode_B[BLOCK_SIZE * 2];
 
-shared KV lkeys_A[BLOCK_SIZE];
-shared KV lkeys_B[BLOCK_SIZE];
+shared uint64_t lkeys_A[BLOCK_SIZE];
+shared uint64_t lkeys_B[BLOCK_SIZE];
+
+shared uint lvalues_A[BLOCK_SIZE];
+shared uint lvalues_B[BLOCK_SIZE];
 
 shared uint digit_offset[NUM_DIGITS];
 
@@ -35,13 +46,13 @@ uniform uint uDigitId;
 void main() {
     uint tid = gl_InvocationID;
     uint wid = gl_WorkGroupID.x;
-    lkeys_A[tid] = keys[key_index(wid, tid, BLOCK_SIZE)];
+    lkeys_A[tid] = keys_in[key_index(wid, tid, BLOCK_SIZE)];
     barrier();
 
     // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
-        KV key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
-        uint bit = uint((key.key & uint64_t(1u << i)) >> i);
+        uint64_t key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+        uint bit = uint((key & uint64_t(1u << i)) >> i);
 
         // Decode 0-bit and 1-bit element positions
         decode_A[tid] = 1 - bit;
@@ -69,25 +80,29 @@ void main() {
             local_index = (tid == 0) ? 0 : (bit ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1]);
         }
 
+        uint value = i % 2 == 0 ? lvalues_A[tid] : lvalues_B[tid];
         if (i % 2 == 0) {
             lkeys_B[local_index] = key;
+            lvalues_B[local_index] = value;
         } else {
             lkeys_A[local_index] = key;
+            lvalues_A[local_index] = value;
         }
         barrier();
     }
 
     // Get minimum index of keys for each digit, used to construct local offset
-    KV key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+    uint64_t key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+    uint value = DIGIT_SIZE % 2 == 0 ? lvalues_A[tid] : lvalues_B[tid];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     digit_offset[tid] = 0xFFFFFFFFu;
     barrier();
     atomicMin(digit_offset[digit], tid);
     barrier();
 
-
     // Write to final sorted position (for the current digit)
     uint global_offset = frequencies[histogram_index(wid, digit, uNumBlocks)];
     uint local_offset = tid - digit_offset[digit];
-    result_keys[global_offset + local_offset] = key;
+    keys_out[global_offset + local_offset] = key;
+    values_out[global_offset + local_offset] = value;
 }

@@ -1,8 +1,9 @@
 #version 460
+#extension GL_ARB_gpu_shader_int64 : enable
+
 #define STB_INCLUDE_LINE_GLSL
 
 #include "utils/quat.glsl"
-#include "utils/sorting.glsl"
 
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
@@ -41,7 +42,11 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
 } draw_args;
 
 layout (std430, binding = 3) writeonly buffer Keys {
-    KV keys[];
+    uint64_t keys[];
+};
+
+layout (std430, binding = 5) writeonly buffer Values {
+    uint values[];
 };
 
 uniform uint uNumSplats;
@@ -89,15 +94,14 @@ void main() {
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
     if (view_pos.z > 0.3) return;
 
-    uint scr_idx = idx;
     atomicAdd(draw_args.instanceCount, 1);
 
     mat2 cov = cov_2d(splats[idx], view_pos);
 
-    screen_splats[scr_idx].cov = cov;
+    screen_splats[idx].cov = cov;
     vec4 clip = uProjection * uView * vec4(splats[idx].position, 1.0);
-    screen_splats[scr_idx].center = clip.xy / clip.w;
-    screen_splats[scr_idx].color = splats[idx].color;
+    screen_splats[idx].center = clip.xy / clip.w;
+    screen_splats[idx].color = splats[idx].color;
 
     // x & y axis standard deviation, scaled to determine quad size
     float s_x = sqrt(cov[0][0]);
@@ -105,11 +109,10 @@ void main() {
     vec2 s = SPLAT_QUAD_SCALE * vec2(s_x, s_y);  // TODO: calculate tighter bounds
 
     // Screen-space quad vertex offsets
-    screen_splats[scr_idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
+    screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
     
-    KV kv;
-    kv.key = floatBitsToUint(clip.z); // use depth as sorting key (finally found a use for this function lol)
-    kv.value = scr_idx;
-    keys[scr_idx] = kv;
+    // TODO: prepend key with tile id once we implement tiled
+    keys[idx] = uint64_t(floatBitsToUint(clip.z)); // use depth as sorting key (finally found a use for this function lol)
+    values[idx] = idx;
 }
 
