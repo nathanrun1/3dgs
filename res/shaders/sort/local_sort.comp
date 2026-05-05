@@ -1,18 +1,13 @@
 ﻿#version 460
 #extension GL_ARB_gpu_shader_int64 : enable
 
-#include "sort/common.comp"
+#include "common/sorting.glsl"
 
 #define BLOCK_SIZE 256
 #define DIGIT_SIZE 8  // d: Bits per digit (radix)
 #define NUM_DIGITS 256 // Equal to 2^d
 
 layout (local_size_x = BLOCK_SIZE) in;
-
-struct KV {
-    uint64_t key;
-    uint value;
-};
 
 layout (std430, binding = 0) readonly buffer Keys {
     KV keys[];
@@ -45,8 +40,8 @@ void main() {
 
     // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
-        uint key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
-        uint bit = (key & (1 << i)) >> i;
+        KV key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+        uint bit = uint((key.key & uint64_t(1u << i)) >> i);
 
         // Decode 0-bit and 1-bit element positions
         decode_A[tid] = 1 - bit;
@@ -83,7 +78,7 @@ void main() {
     }
 
     // Get minimum index of keys for each digit, used to construct local offset
-    uint key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+    KV key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     digit_offset[tid] = 0xFFFFFFFFu;
     barrier();
