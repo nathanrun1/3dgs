@@ -24,7 +24,7 @@ uniform uint uDigitId;
 
 void main() {
     uint wid = gl_WorkGroupID.x;
-    uint tid = gl_InvocationID;
+    uint tid = gl_LocalInvocationID.x;
     
 //    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
 //    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)

@@ -19,7 +19,7 @@ layout (std430, binding = 4) writeonly buffer KeysOut {
 layout (std430, binding = 5) readonly buffer ValuesIn {
     uint values_in[];
 };
-layout (std430, binding = 6) readonly buffer ValuesOut {
+layout (std430, binding = 6) writeonly buffer ValuesOut {
     uint values_out[];
 };
 
@@ -44,7 +44,7 @@ uniform uint uNumBlocks;
 uniform uint uDigitId;
 
 void main() {
-    uint tid = gl_InvocationID;
+    uint tid = gl_LocalInvocationID.x;
     uint wid = gl_WorkGroupID.x;
     lkeys_A[tid] = keys_in[key_index(wid, tid, BLOCK_SIZE)];
     barrier();
@@ -75,9 +75,9 @@ void main() {
         //   Shift decode one to the right when retrieving values to convert to exclusive scan
         uint local_index;
         if (findLSB(BLOCK_SIZE * 2) % 2 == 0) {
-            local_index = (tid == 0) ? 0 : (bit ? decode_A[BLOCK_SIZE + tid - 1] : decode_A[tid - 1]);
+            local_index = (tid == 0) ? 0 : (bool(bit) ? decode_A[BLOCK_SIZE + tid - 1] : decode_A[tid - 1]);
         } else {
-            local_index = (tid == 0) ? 0 : (bit ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1]);
+            local_index = (tid == 0) ? 0 : (bool(bit) ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1]);
         }
 
         uint value = i % 2 == 0 ? lvalues_A[tid] : lvalues_B[tid];

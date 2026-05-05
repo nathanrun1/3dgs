@@ -1,7 +1,5 @@
 #version 460
 
-#include "common/sorting.glsl"
-
 struct ScreenSplat {
     vec2 center;
     mat2 cov;

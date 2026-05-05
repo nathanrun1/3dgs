@@ -21,7 +21,7 @@ uniform uint uBaseStride;  // Corresponding stride in global array of indices in
 
 void main() {
     uint wid = gl_WorkGroupID.x;
-    uint tid = 2 * gl_InvocationID + 1;
+    uint tid = 2 * gl_LocalInvocationID.x + 1;
     
     frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)] = local[tid];
     frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)] = local[tid - 1];
