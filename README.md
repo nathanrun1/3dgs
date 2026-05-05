@@ -27,6 +27,9 @@ Next up:
 
 https://github.com/user-attachments/assets/ffa9edd4-2e27-49cb-8a6e-d3a042a9a83a
 
+# 2026-05-04
+Nothing visual to show, just wanted to indicate that GPU radix sort is fully drafted, in the shaders at least. Currently implementing the CPU side, which is a little complicated as well since I want to make it support an arbitrarily high splat count, so I gotta adapt the amount of [Blelloch](https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda#:~:text=A%20Work%2DEfficient%20Parallel%20Scan) upsweeps/downsweeps based on how large the histogram is.
+
 # 2026-04-16
 ## 11PM
 OKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK LFGG. Turns out you aren't supposed to normalize the bivariate normal p.d.f., i.e. you aren't supposed to use the p.d.f. directly as the opacity. My intuition wrongly assumed that the total radiance from the splat should be invariant with distance, but I forgot about the inverse square law. The total radiance per solid angle from the splat is proportional to r^2 (where r is distance to the splat), yes, but I forgot that the radiance received from that splat is proportional to 1/r^2, cancelling out that effect. So, we remove the `1/sqrt(determinant(cov))` normalization factor, and just use the transformed standard p.d.f.'s value as is. This way, the radiance (brightness) that we receive from any location on the splat does not vary with distance, just like irl.
