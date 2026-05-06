@@ -51,7 +51,7 @@ def _rand_cov(std_range = (0.1, 0.5)) -> np.ndarray:
     return cov
 
 
-def _rand_splat(min_pos: np.ndarray = np.repeat(-50.0, 3), max_pos: np.ndarray = np.repeat(50.0, 3), std_range = (0.1, 0.5)) -> Splat:
+def _rand_splat(min_pos: np.ndarray = np.repeat(-5.0, 3), max_pos: np.ndarray = np.repeat(5.0, 3), std_range = (0.1, 0.5)) -> Splat:
     """Generates a random 3D Gaussian Splat"""
     return Splat(
         position=np.random.uniform(min_pos, max_pos),
