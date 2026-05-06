@@ -1,4 +1,4 @@
-﻿uint histogram_index(uint block_id, uint digit, uint num_blocks) {
+uint histogram_index(uint block_id, uint digit, uint num_blocks) {
     return digit * num_blocks + block_id;
 }
 
@@ -6,7 +6,7 @@ uint key_index(uint block_id, uint offset, uint block_size) {
     return block_id * block_size + offset;
 }
 
-uint digit_value(uint64_t kv, uint digit_size, uint digit_id) {
+uint digit_value(uint key, uint digit_size, uint digit_id) {
     uint mask = ((1 << digit_size) - 1) << (digit_id * digit_size);
-    return uint((kv & uint64_t(mask)) >> (digit_id * digit_size));
+    return (key & mask) >> (digit_id * digit_size);
 }

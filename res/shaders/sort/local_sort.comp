@@ -1,5 +1,5 @@
-﻿#version 460
-#extension GL_ARB_gpu_shader_int64 : enable
+#version 460
+//#extension GL_ARB_gpu_shader_int64 : enable
 
 #include "common/sorting.glsl"
 
@@ -10,10 +10,10 @@
 layout (local_size_x = BLOCK_SIZE) in;
 
 layout (std430, binding = 3) readonly buffer KeysIn {
-    uint64_t keys_in[];
+    uint keys_in[];
 };
 layout (std430, binding = 4) writeonly buffer KeysOut {
-    uint64_t keys_out[];
+    uint keys_out[];
 };
 
 layout (std430, binding = 5) readonly buffer ValuesIn {
@@ -32,8 +32,8 @@ layout (std430, binding = 7) readonly buffer Histogram {
 shared uint decode_A[BLOCK_SIZE * 2];
 shared uint decode_B[BLOCK_SIZE * 2];
 
-shared uint64_t lkeys_A[BLOCK_SIZE];
-shared uint64_t lkeys_B[BLOCK_SIZE];
+shared uint lkeys_A[BLOCK_SIZE];
+shared uint lkeys_B[BLOCK_SIZE];
 
 shared uint lvalues_A[BLOCK_SIZE];
 shared uint lvalues_B[BLOCK_SIZE];
@@ -51,8 +51,8 @@ void main() {
 
     // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
-        uint64_t key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
-        uint bit = uint((key & uint64_t(1u << i)) >> i);
+        uint key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+        uint bit = (key & (1u << i)) >> i;
 
         // Decode 0-bit and 1-bit element positions
         decode_A[tid] = 1 - bit;
@@ -92,7 +92,7 @@ void main() {
     }
 
     // Get minimum index of keys for each digit, used to construct local offset
-    uint64_t key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+    uint key = DIGIT_SIZE % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
     uint value = DIGIT_SIZE % 2 == 0 ? lvalues_A[tid] : lvalues_B[tid];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     digit_offset[tid] = 0xFFFFFFFFu;

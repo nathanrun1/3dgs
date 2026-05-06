@@ -1,5 +1,5 @@
 #version 460
-#extension GL_ARB_gpu_shader_int64 : enable
+//#extension GL_ARB_gpu_shader_int64 : enable
 
 #include "common/sorting.glsl"
 
@@ -10,7 +10,7 @@
 layout (local_size_x = BLOCK_SIZE) in;
 
 layout (std430, binding = 3) readonly buffer Keys {
-    uint64_t keys[];
+    uint keys[];
 };
 
 layout (std430, binding = 7) buffer Histogram {
@@ -29,7 +29,7 @@ void main() {
 //    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
 //    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
     
-    uint64_t key = keys[key_index(wid, tid, BLOCK_SIZE)];
+    uint key = keys[key_index(wid, tid, BLOCK_SIZE)];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     atomicAdd(local_frequencies[digit], 1);
     barrier();

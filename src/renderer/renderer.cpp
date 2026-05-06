@@ -35,6 +35,7 @@ namespace Renderer {
     const unsigned int SPLAT_KEY_BLOCK_SIZE = 256;
     const unsigned int SPLAT_SORT_DIGIT_SIZE = 8;
     const unsigned int SPLAT_SORT_NUM_DIGITS = 1 << SPLAT_SORT_DIGIT_SIZE;
+    const unsigned int SPLAT_SORT_DIGITS_PER_KEY = 4; // key bits / SPLAT_SORT_DIGIT_SIZE
     
     const unsigned int SPLAT_SCAN_BLOCK_SIZE = 512;
     const unsigned int SPLAT_TOP_SCAN_BLOCK_SIZE = 2048;
@@ -70,11 +71,6 @@ namespace Renderer {
     unsigned int g_key_buffer_size;
     unsigned int g_num_key_blocks;
     unsigned int g_histogram_size;
-
-
-    unsigned int g_in_keysSSBO;
-    unsigned int g_out_keysSSBO;
-    unsigned int g_histogramSSBO;
 
     unsigned int g_emptyVAO;
 
@@ -246,19 +242,19 @@ namespace Renderer {
         
         // Init buffers for splat sorting
         g_key_buffer_size = std::bit_ceil(g_num_splats);  // Ensure keys buffer size is power of 2 to simplify radix sort
-        g_num_key_blocks = g_key_buffer_size / SPLAT_KEY_BLOCK_SIZE;
+        g_num_key_blocks = (g_key_buffer_size + SPLAT_KEY_BLOCK_SIZE - 1) / SPLAT_KEY_BLOCK_SIZE;
         g_histogram_size = g_num_key_blocks * SPLAT_SORT_NUM_DIGITS;
         
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys, initialize all to max value
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint64_t) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         GLubyte fill = 0xFF;
         glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R8I, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &fill);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
-        
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysB_SSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(uint64_t) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, g_keysB_SSBO);
-        
+
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_valuesA_SSBO);
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
@@ -269,7 +265,18 @@ namespace Renderer {
         
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_histogram_SSBO);  // Digit histogram
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_histogram_size, nullptr, GL_DYNAMIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, g_valuesB_SSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, g_histogram_SSBO);
+
+        // Debug labels
+        glObjectLabel(GL_BUFFER, g_splatSSBO, -1, "splat_SSBO");
+        glObjectLabel(GL_BUFFER, g_screen_splatSSBO, -1, "screen_splat_SSBO");
+        glObjectLabel(GL_BUFFER, g_splat_INDB, -1, "splat_INDB");
+
+        glObjectLabel(GL_BUFFER, g_keysA_SSBO, -1, "keysA_SSBO");
+        glObjectLabel(GL_BUFFER, g_keysB_SSBO, -1, "keysB_SSBO");
+        glObjectLabel(GL_BUFFER, g_valuesA_SSBO, -1, "valuesA_SSBO");
+        glObjectLabel(GL_BUFFER, g_valuesB_SSBO, -1, "valuesB_SSBO");
+        glObjectLabel(GL_BUFFER, g_histogram_SSBO, -1, "histogram_SSBO");
     }
     
     void _init_programs() {
@@ -388,30 +395,42 @@ namespace Renderer {
         // Upsweeps until current level fits in single up/down
         use_program("upsweep");
         while (g_histogram_size / stride > SPLAT_TOP_SCAN_BLOCK_SIZE) {
+            std::cout << "upsweep pass, stride: " << stride << std::endl;
             g_active_program->set_uint("uBaseStride", stride);
             glDispatchCompute(g_histogram_size / (stride * SPLAT_SCAN_BLOCK_SIZE), 1, 1);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             stride *= SPLAT_SCAN_BLOCK_SIZE;
         }
         
         // Top-level upsweep & downsweep
         use_program("top");
         g_active_program->set_uint("uBaseStride", stride);
+        std::cout << "top pass, stride: " << stride << std::endl;
         glDispatchCompute(1, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         
         stride /= SPLAT_SCAN_BLOCK_SIZE;
         
         // Downsweeps until scan complete
         use_program("downsweep");
         while (stride > 0) {
+            std::cout << "downsweep pass, stride: " << stride << std::endl;
             g_active_program->set_uint("uBaseStride", stride);
             glDispatchCompute(g_histogram_size / (stride * SPLAT_SCAN_BLOCK_SIZE), 1, 1);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
             stride /= SPLAT_SCAN_BLOCK_SIZE;
         }
     }
     
     /** Radix sorts all splats using the GPU, must be invoked before rendering pass */
     void _sort_splats() {
-        for (int i = 0; i < SPLAT_SORT_NUM_DIGITS; ++i) {
+        std::cout << "key buffer size: " << g_key_buffer_size << std::endl;
+        std::cout << "histogram size: " << g_histogram_size << std::endl;
+        std::cout << "num blocks: " << g_num_key_blocks << std::endl;
+
+        for (int i = 0; i < SPLAT_SORT_DIGITS_PER_KEY; ++i) {
+            std::cout << "digit id: " << i << std::endl;
+
             // Swap key/value buffers (3/5 in, 4/6 out)
             bool A_in = i % 2 == 0;
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, A_in ? g_keysA_SSBO : g_keysB_SSBO);
@@ -421,21 +440,27 @@ namespace Renderer {
             
             GLubyte fill = 0x00; // Reset histogram
             glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R8I, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &fill);
-            
+
+
             // Build digit histogram
             use_program("build_histogram");
             g_active_program->set_uint("uNumBlocks", g_num_key_blocks);
             g_active_program->set_uint("uDigitId", i);
+            std::cout << "histogram pass" << std::endl;
             glDispatchCompute(g_num_key_blocks, 1, 1);
-            
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
             // Blelloch prefix scan
             _scan_histogram();
             
             use_program("local_sort");
             g_active_program->set_uint("uNumBlocks", g_num_key_blocks);
             g_active_program->set_uint("uDigitId", i);
+            std::cout << "local sort pass" << std::endl;
             glDispatchCompute(g_num_key_blocks, 1, 1);
+            glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         }
+        //exit(1); // temp
     }
 
     void draw_splats() {
@@ -478,6 +503,7 @@ namespace Renderer {
 
     void add_program(const std::string& program_id, const ShaderProgram& program) {
         g_available_programs.insert_or_assign(program_id, program);
+        glObjectLabel(GL_PROGRAM, program.get_id(), -1, program_id.c_str());
     }
 
     void use_program(const std::string& program_id) {
