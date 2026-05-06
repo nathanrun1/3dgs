@@ -47,6 +47,7 @@ void main() {
     uint tid = gl_LocalInvocationID.x;
     uint wid = gl_WorkGroupID.x;
     lkeys_A[tid] = keys_in[key_index(wid, tid, BLOCK_SIZE)];
+    lvalues_A[tid] = values_in[key_index(wid, tid, BLOCK_SIZE)];
     barrier();
 
     // LSD radix sort per bit
@@ -60,13 +61,13 @@ void main() {
         barrier();
 
         // Hillis-Steele inclusive prefix scan
-        for (uint stride = 1; stride < (BLOCK_SIZE * 2); stride << 1) {
+        for (uint stride = 1; stride < (BLOCK_SIZE * 2); stride <<= 1) {
             if (findLSB(stride) % 2 == 0) {
-                decode_B[tid] = decode_A[tid] + decode_A[tid - stride];
-                decode_B[BLOCK_SIZE + tid] = decode_A[BLOCK_SIZE + tid] - decode_A[BLOCK_SIZE + tid - stride];
+                decode_B[tid] = decode_A[tid] + (tid >= stride ? decode_A[tid - stride] : 0);
+                decode_B[BLOCK_SIZE + tid] = decode_A[BLOCK_SIZE + tid] + ((BLOCK_SIZE + tid) >= stride ? decode_A[BLOCK_SIZE + tid - stride] : 0);
             } else {
-                decode_A[tid] = decode_B[tid] + decode_B[tid - stride];
-                decode_A[BLOCK_SIZE + tid] = decode_B[BLOCK_SIZE + tid] - decode_B[BLOCK_SIZE + tid - stride];
+                decode_A[tid] = decode_B[tid] + (tid >= stride ? decode_B[tid - stride] : 0);
+                decode_A[BLOCK_SIZE + tid] = decode_B[BLOCK_SIZE + tid] + ((BLOCK_SIZE + tid) >= stride ? decode_B[BLOCK_SIZE + tid - stride] : 0);
             }
             barrier();
         }

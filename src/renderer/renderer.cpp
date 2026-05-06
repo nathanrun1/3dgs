@@ -247,8 +247,6 @@ namespace Renderer {
         
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys, initialize all to max value
         glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
-        GLubyte fill = 0xFF;
-        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R8I, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &fill);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysB_SSBO);
@@ -438,8 +436,8 @@ namespace Renderer {
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, A_in ? g_valuesA_SSBO : g_valuesB_SSBO);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, A_in ? g_valuesB_SSBO : g_valuesA_SSBO);
             
-            GLubyte fill = 0x00; // Reset histogram
-            glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R8I, GL_RED_INTEGER, GL_UNSIGNED_BYTE, &fill);
+            unsigned int fill = 0; // Reset histogram
+            glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
 
 
             // Build digit histogram
@@ -474,6 +472,11 @@ namespace Renderer {
         // ImGui::End();
 
         const Camera& main_camera = World::get_main_camera();
+        
+        // Pad initial keys buffer with max uint for sorting
+        unsigned int fill = 0xFFFFFFFF;
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);
+        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
 
         use_program("project_splats");
         g_active_program->set_mat4("uProjection", main_camera.get_proj_matrix());
@@ -481,7 +484,8 @@ namespace Renderer {
         g_active_program->set_vec3("uCameraPos", main_camera.transform.position);
         g_active_program->set_uint("uNumSplats", g_num_splats);
         g_active_program->set_vec2("uTanFov", main_camera.tan_fov());
-
+        
+        std::cout << "render pass" << std::endl;
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
         glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);

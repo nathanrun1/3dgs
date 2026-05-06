@@ -22,14 +22,14 @@ uniform uint uBaseStride;  // Corresponding stride in global array of indices in
 void main() {
     uint wid = gl_WorkGroupID.x;
     uint tid = 2 * gl_LocalInvocationID.x + 1;
-    
-    frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)] = local[tid];
-    frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)] = local[tid - 1];
+
+    local[tid] = frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)];
+    local[tid - 1] = frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)];
     barrier();
 
     // Upsweep
     //   Right-most node of subsection stores sum of entire subsection.
-    for (uint stride = 1; stride < LOCAL_ARR_SIZE; stride << 1) {
+    for (uint stride = 1; stride < LOCAL_ARR_SIZE; stride <<= 1) {
         if (((tid + 1) / 2) % stride == 0) {
             local[tid] = local[tid] + local[tid - stride];
         }
@@ -42,7 +42,7 @@ void main() {
     //   Root starts by storing prefix of its section. Sets right half root to prefix of right half (left half sum + itself), 
     //   left half root to prefix of left half (i.e. prefix of entire section, itself). Once you get to the leaf nodes,
     //   the prefixes are accurate down to each element.
-    for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >> 1) {
+    for (uint stride = LOCAL_ARR_SIZE / 2; stride > 0; stride >>= 1) {
         if (((tid + 1) / 2) % stride == 0) {
             uint temp = local[tid];
             local[tid] = local[tid] + local[tid - stride];

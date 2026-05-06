@@ -26,8 +26,8 @@ void main() {
     uint wid = gl_WorkGroupID.x;
     uint tid = gl_LocalInvocationID.x;
     
-//    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
-//    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
+    local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
+    barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
     
     uint key = keys[key_index(wid, tid, BLOCK_SIZE)];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
@@ -35,7 +35,7 @@ void main() {
     barrier();
 
     // Each thread writes final result of same bin(s) it initialized
-    frequencies[histogram_index(wid, digit, uNumBlocks)] = local_frequencies[tid];
+    frequencies[histogram_index(wid, tid, uNumBlocks)] = local_frequencies[tid];
     
     // We write to local frequencies in a first pass, and then write the results to the global histogram after
     //   This avoids atomic operations to DRAM (global memory), which are generally slower.
