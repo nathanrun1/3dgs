@@ -241,7 +241,7 @@ namespace Renderer {
         
         
         // Init buffers for splat sorting
-        g_key_buffer_size = std::bit_ceil(g_num_splats);  // Ensure keys buffer size is power of 2 to simplify radix sort
+        g_key_buffer_size = std::max(SPLAT_KEY_BLOCK_SIZE, std::bit_ceil(g_num_splats));  // Ensure keys buffer size is power of 2 to simplify radix sort
         g_num_key_blocks = (g_key_buffer_size + SPLAT_KEY_BLOCK_SIZE - 1) / SPLAT_KEY_BLOCK_SIZE;
         g_histogram_size = g_num_key_blocks * SPLAT_SORT_NUM_DIGITS;
         
@@ -477,6 +477,12 @@ namespace Renderer {
         unsigned int fill = 0xFFFFFFFF;
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);
         glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
+        
+        // Bind key buffers to starting locations
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, g_keysB_SSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, g_valuesB_SSBO);
 
         use_program("project_splats");
         g_active_program->set_mat4("uProjection", main_camera.get_proj_matrix());
@@ -485,7 +491,6 @@ namespace Renderer {
         g_active_program->set_uint("uNumSplats", g_num_splats);
         g_active_program->set_vec2("uTanFov", main_camera.tan_fov());
         
-        std::cout << "render pass" << std::endl;
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
         glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);
@@ -495,6 +500,7 @@ namespace Renderer {
         // Radix sort
         _sort_splats();
 
+        std::cout << "render pass" << std::endl;
         use_program("render_splats");
         g_active_program->set_mat4("uView", main_camera.get_view_matrix());
         g_active_program->set_mat4("uProj", main_camera.get_proj_matrix());

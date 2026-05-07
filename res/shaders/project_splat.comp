@@ -112,7 +112,7 @@ void main() {
     screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
     
     // TODO: prepend key with tile id once we implement tiled
-    keys[idx] = floatBitsToUint(clip.z); // use depth as sorting key (finally found a use for this function lol)
+    keys[idx] = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z); // use -depth as sorting key (finally found a use for this function lol)
     values[idx] = idx;
 }
 

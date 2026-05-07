@@ -53,7 +53,7 @@ void main() {
     // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
         uint key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
-        uint bit = (key & (1u << i)) >> i;
+        uint bit = (digit_value(key, DIGIT_SIZE, uDigitId) & (1u << i)) >> i;
 
         // Decode 0-bit and 1-bit element positions
         decode_A[tid] = 1 - bit;
@@ -76,9 +76,17 @@ void main() {
         //   Shift decode one to the right when retrieving values to convert to exclusive scan
         uint local_index;
         if (findLSB(BLOCK_SIZE * 2) % 2 == 0) {
-            local_index = (tid == 0) ? 0 : (bool(bit) ? decode_A[BLOCK_SIZE + tid - 1] : decode_A[tid - 1]);
+            if (tid == 0) {
+                local_index = bool(bit) ? decode_A[BLOCK_SIZE - 1] : 0;
+            } else {
+                local_index = bool(bit) ? decode_A[BLOCK_SIZE + tid - 1] : decode_A[tid - 1];
+            }
         } else {
-            local_index = (tid == 0) ? 0 : (bool(bit) ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1]);
+            if (tid == 0) {
+                local_index = bool(bit) ? decode_B[BLOCK_SIZE - 1] : 0;
+            } else {
+                local_index = bool(bit) ? decode_B[BLOCK_SIZE + tid - 1] : decode_B[tid - 1];
+            }
         }
 
         uint value = i % 2 == 0 ? lvalues_A[tid] : lvalues_B[tid];
