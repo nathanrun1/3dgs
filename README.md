@@ -3,6 +3,13 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 
 The stack of this project is C++ and OpenGL
 
+# 2025-05-06
+Got radix sort working!! (for <256 splats at least, though should be easy to fix the implementation for larger splat counts from here). Needed to solve a bunch of implementation bugs both on GPU and CPU side, but overall the intended implementation is the same.
+
+https://github.com/user-attachments/assets/0a5b96dd-3071-4208-8c75-29bca82ef547
+
+Actually, ngl looks like there's a bit of sorting inaccuracies, I see some further splats seemingly rendering on top of nearer ones. Will need to fix that, but the sorting order is at least stable which is appealing enough (was flickering before due to some bug).
+
 # 2026-05-04
 Nothing visual to show atm, but wanted to update. Implemented full draft on GPU side (all of the compute shaders) for the GPU radix sort. Implementation:
 - 5 new buffers: Two key buffers, two value buffers, one histogram buffer.
