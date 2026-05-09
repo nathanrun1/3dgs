@@ -22,9 +22,9 @@ uniform uint uBaseStride;
 void main() {
     uint wid = gl_WorkGroupID.x;
     uint tid = 2 * gl_LocalInvocationID.x + 1;
-
-    local[tid] = frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)];
-    local[tid - 1] = frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)];
+    
+    local[tid] = histogram_value_at(tid, wid, NUM_THREADS, uBaseStride);
+    local[tid - 1] = histogram_value_at(tid - 1, wid, NUM_THREADS, uBaseStride);
     barrier();
     
     // Upsweep
@@ -35,6 +35,10 @@ void main() {
         barrier();
     }
 
-    frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)] = local[tid];
-    frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)] = local[tid - 1];
+    if (hist_index_r < frequencies.length()) {
+        frequencies[histogram_index(tid, wid, NUM_THREADS, uBaseStride)] = local[tid];
+    }
+    if (hist_index_l < frequencies.length()) {
+        frequencies[histogram_index(tid - 1, wid, NUM_THREADS, uBaseStride)] = local[tid - 1];
+    }
 }

@@ -64,9 +64,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-splats", "-p", help="Amount of splats to generate", type=int, default=100)
     parser.add_argument("--num-samples", "-s", help="Amount of samples to generate per splat", type=int, default=0)
+    parser.add_argument("--splat-range", "-r", help="Max distance of splat position to origin, must be >= 0", type=float, default=5)
     args = parser.parse_args()
+    
+    assert args.splat_range >= 0, f"Splat range value cannot be negative. Value: {args.splat_range}"
 
-    splats: list[Splat] = [_rand_splat() for _ in range(args.num_splats)]
+    splats: list[Splat] = [_rand_splat(min_pos=np.repeat(-args.splat_range, 3), max_pos=np.repeat(args.splat_range, 3)) for _ in range(args.num_splats)]
     
     if args.num_samples > 0:
         samples = np.concatenate([s.sample(args.num_samples) for s in splats])

@@ -92,7 +92,7 @@ void main() {
     if (idx >= uNumSplats) return;
 
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
-    if (view_pos.z > 0.3) return;
+    if (view_pos.z > 0.1) return;
 
     atomicAdd(draw_args.instanceCount, 1);
 
@@ -115,4 +115,3 @@ void main() {
     keys[idx] = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z); // use -depth as sorting key (finally found a use for this function lol)
     values[idx] = idx;
 }
-
