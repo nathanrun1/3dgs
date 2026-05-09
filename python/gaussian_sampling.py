@@ -1,86 +1,70 @@
 ﻿import argparse
-from dataclasses import dataclass
-
 import numpy as np
 import json
 from plyfile import PlyData, PlyElement
-
 from scipy.spatial.transform import Rotation as R
-from scipy.stats import random_correlation
-
-def _diagonalize(matrix):
-    """Diagonalizes the given matrix as M = PDP^-1, returns P, D"""
-    eigenvalues, eigenvectors = np.linalg.eig(matrix)
-    return eigenvectors, np.diag(eigenvalues)
-
-@dataclass
-class Splat:
-    position: np.ndarray
-    """3d vector, splat position in world space"""
-    cov: np.ndarray
-    """3x3 covariance matrix"""
-    color: np.ndarray
-    """4d vector, splat color"""
-
-    def ply_tuple(self) -> tuple:
-        """Generates a tuple laying out the splat's data in the same format as it would be placed in a .ply file"""
-        rot_mat, scale_mat = _diagonalize(self.cov)
-        scale_mat = np.sqrt(scale_mat)
-        rot = R.from_matrix(rot_mat, assume_valid=True)
-        return tuple(np.concat([self.position, rot.as_quat().tolist(), np.diag(scale_mat).tolist(), self.color]))
-        return tuple(self.position + rot.as_quat().tolist() + np.diag(scale_mat).tolist() + self.color)
 
 
-    def sample(self, n = 100) -> np.ndarray:
-        """Generates samples from this splat's distribution"""
-        return np.random.multivariate_normal(self.position, self.cov, n)
+PLY_DTYPE = [
+    ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
+    ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'), ('r_3', 'f4'),
+    ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4'),
+    ('r', 'f4'), ('g', 'f4'), ('b', 'f4'), ('a', 'f4'),
+]
 
 
-def _rand_cov(std_range = (0.1, 0.5)) -> np.ndarray:
-    """Generates a random 3D covariance matrix, with stdev for each axis generated between the given range"""
+def rand_cov_batch(n, std_range=(0.1, 0.5)):
+    """Generate n random 3x3 covariance matrices via random rotation + random scale."""
     low, high = std_range
-    stds = np.random.uniform(low, high, 3)
-
-    eigs = np.random.dirichlet(np.ones(3)) * 3
-    corr = random_correlation.rvs(eigs)
-
-
-    D = np.diag(stds)
-    cov = D @ corr @ D
-
-    return cov
+    stds = np.random.uniform(low, high, (n, 3))
+    # Random rotation matrices — much faster than random_correlation.rvs
+    rot_mats = R.random(n).as_matrix()
+    # Cov = R @ diag(std^2) @ R^T
+    scaled = rot_mats * (stds[:, np.newaxis, :] ** 2)  # (n,3,3) * (n,1,3) broadcasts
+    covs = scaled @ np.swapaxes(rot_mats, -1, -2)
+    return covs
 
 
-def _rand_splat(min_pos: np.ndarray = np.repeat(-5.0, 3), max_pos: np.ndarray = np.repeat(5.0, 3), std_range = (0.1, 0.5)) -> Splat:
-    """Generates a random 3D Gaussian Splat"""
-    return Splat(
-        position=np.random.uniform(min_pos, max_pos),
-        color=np.concatenate([np.random.uniform([0, 0, 0], [1, 1, 1]), [1]]),
-        cov=_rand_cov(std_range)
-    )
+def generate_splat_array(n, splat_range=5.0, std_range=(0.1, 0.5)):
+    positions = np.random.uniform(-splat_range, splat_range, (n, 3))
+    colors = np.column_stack([
+        np.random.uniform(0, 1, (n, 3)),
+        np.ones(n),
+    ])
+    covs = rand_cov_batch(n, std_range)
+
+    # Eigendecompose all covariance matrices at once
+    eigenvalues, eigenvectors = np.linalg.eigh(covs)  # eigh since covs are symmetric
+    scales = np.sqrt(np.clip(eigenvalues, 0, None))  # (n, 3)
+    quats = R.from_matrix(eigenvectors, assume_valid=True).as_quat()     # (n, 4)
+
+    # Pack into structured array
+    raw = np.column_stack([positions, quats, scales, colors]).astype(np.float32)
+    result = np.empty(n, dtype=PLY_DTYPE)
+    for i, (name, _) in enumerate(PLY_DTYPE):
+        result[name] = raw[:, i]
+    return result
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--num-splats", "-p", help="Amount of splats to generate", type=int, default=100)
-    parser.add_argument("--num-samples", "-s", help="Amount of samples to generate per splat", type=int, default=0)
-    parser.add_argument("--splat-range", "-r", help="Max distance of splat position to origin, must be >= 0", type=float, default=5)
+    parser.add_argument("--num-splats", "-p", type=int, default=100)
+    parser.add_argument("--num-samples", "-s", type=int, default=0)
+    parser.add_argument("--splat-range", "-r", type=float, default=5.0)
     args = parser.parse_args()
-    
-    assert args.splat_range >= 0, f"Splat range value cannot be negative. Value: {args.splat_range}"
+    assert args.splat_range >= 0
 
-    splats: list[Splat] = [_rand_splat(min_pos=np.repeat(-args.splat_range, 3), max_pos=np.repeat(args.splat_range, 3)) for _ in range(args.num_splats)]
-    
+    splat_data = generate_splat_array(args.num_splats, args.splat_range)
+
     if args.num_samples > 0:
-        samples = np.concatenate([s.sample(args.num_samples) for s in splats])
+        # Regenerate covs for sampling (or refactor to keep them)
+        positions = np.column_stack([splat_data['x'], splat_data['y'], splat_data['z']])
+        covs = rand_cov_batch(args.num_splats)
+        samples = np.vstack([
+            np.random.multivariate_normal(positions[i], covs[i], args.num_samples)
+            for i in range(args.num_splats)
+        ])
         with open("../res/data/samples.json", "w") as f:
-            f.write(json.dumps(samples.tolist(), indent=4))
-    
-    splat_data = np.array([s.ply_tuple() for s in splats],
-                      dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('r_0', 'f4'), ('r_1', 'f4'), ('r_2', 'f4'),
-                             ('r_3', 'f4'), ('s_0', 'f4'), ('s_1', 'f4'), ('s_2', 'f4'), ('r', 'f4'), ('g', 'f4'),
-                             ('b', 'f4'), ('a', 'f4')])
-    
-    e1 = PlyElement.describe(splat_data, 'splat')
-    
-    PlyData([e1], text=True).write("../res/data/splat.ply")
+            json.dump(samples.tolist(), f, indent=4)
+
+    PlyData([PlyElement.describe(splat_data, 'splat')], text=True).write("../res/data/splat.ply")
