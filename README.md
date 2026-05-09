@@ -4,6 +4,15 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 The stack of this project is C++ and OpenGL
 
 # 2025-05-06
+
+# 8pm
+Beautiful... 
+
+https://github.com/user-attachments/assets/0c31b926-591e-4387-83e6-fa90ed5c384f
+
+Fixed the depth key being used, it's a bit more complicated than just converting float bits directly, have to also treat positive & negative floats differently. Still doesn't work above 2048 splats (that's when multiple up/down sweeps are needed), so will need to fix that. And then afterwards it's just spherical harmonics and then probably other stuff but that will be it for major implementation.
+
+# 10am
 Got radix sort working!! (for <256 splats at least, though should be easy to fix the implementation for larger splat counts from here). Needed to solve a bunch of implementation bugs both on GPU and CPU side, but overall the intended implementation is the same.
 
 https://github.com/user-attachments/assets/0a5b96dd-3071-4208-8c75-29bca82ef547
