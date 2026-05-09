@@ -4,7 +4,7 @@
 #include "common/sorting.glsl"
 
 #define BLOCK_SIZE 256
-#define DIGIT_SIZE 8  // d: Bits per digit (radix)
+#define DIGIT_SIZE 8   // d: Bits per digit (radix)
 #define NUM_DIGITS 256 // Equal to 2^d
 
 layout (local_size_x = BLOCK_SIZE) in;

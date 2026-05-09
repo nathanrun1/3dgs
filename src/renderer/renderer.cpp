@@ -6,7 +6,6 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/gtx/io.hpp>
 #include <imgui.h>
-#include <windows.h>
 
 #include "u_blocks.h"
 #include "assets/materials.h"
@@ -24,12 +23,15 @@
 // Single buffer for all models
 
 // Force dedicated GPU (system-dependent, can comment out if integrated supports all extensions; mine doesn't)
+#ifdef _WIN32
+#include <windows.h>
 extern "C" {
     // For NVIDIA
     __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
     // For AMD
     __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
+#endif
 
 namespace Renderer {
     const unsigned int SPLAT_KEY_BLOCK_SIZE = 256;
