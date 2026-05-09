@@ -4,7 +4,7 @@ The goal of this project is to create a tool that can render pretrained 3DGS (3D
 The stack of this project is C++ and OpenGL
 
 # 2025-05-09
-Okay, fixed the radix sort for counts above (2048). Below 2048, only the top blelloch scan needed to run, so no need for the separate up and down sweep passes. Above that though, wasn't working. Apparently the issue was simply that the scan shaders didn't correctly calculate their index offsets (they assumed block size = thread count, when it was actually thread count * 2). Working now for arbitrarily high splat counts!! But, insanely slow, as we're running one draw call per splat. Now we implement tile-based rendering for optimization.
+Okay, fixed the radix sort for counts above 2048. Below 2048, only the top blelloch scan needed to run, so no need for the separate up and down sweep passes. Above that though, wasn't working. Apparently the issue was simply that the scan shaders didn't correctly calculate their index offsets (they assumed block size = thread count, when it was actually thread count * 2). Working now for arbitrarily high splat counts!! But, insanely slow, as we're running one draw call per splat. Now we implement tile-based rendering for optimization.
 
 <img width="1505" height="1080" alt="Screenshot from 2026-05-09 13-11-45" src="https://github.com/user-attachments/assets/f5dd6970-d743-4d3f-9b65-fc4599f23984" />
 *1M random splats*
