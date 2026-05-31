@@ -36,8 +36,4 @@ void main() {
 
     // Each thread writes final result of same bin(s) it initialized
     frequencies[histogram_index(wid, tid, uNumBlocks)] = local_frequencies[tid];
-    
-    // We write to local frequencies in a first pass, and then write the results to the global histogram after
-    //   This avoids atomic operations to DRAM (global memory), which are generally slower.
-    //   Comes at the cost of thread sync, so that's the tradeoff, but probably ok idk
 }

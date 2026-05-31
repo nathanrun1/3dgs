@@ -2,18 +2,8 @@
 #define STB_INCLUDE_LINE_GLSL
 
 #include "utils/gaussian.glsl"
+#include "common/structs.glsl"
 
-struct ScreenSplat {
-    vec2 center;
-    mat2 cov;
-    vec4 color;
-    vec2 offsets[4];
-};
-
-struct TileInfo {
-    uint key_offset;
-    uint key_count;
-};
 
 layout (std430, binding = 0) readonly buffer ScreenSplats {
     ScreenSplat screen_splats[];
@@ -38,7 +28,7 @@ vec3 alpha_blend(vec3 dst, vec3 src, float alpha) {
 }
 
 void main() {
-    vec4 final_color = uBackgroundColor;
+    vec4 final_color = vec4(uBackgroundColor, 1.0);
     
     TileInfo tinfo = tile_info[vTileId];
     
