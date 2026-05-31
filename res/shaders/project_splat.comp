@@ -29,7 +29,7 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
 } draw_args;
 
 layout (std430, binding = 3) writeonly buffer Keys {
-    uint keys[];
+    uvec2 keys[];
 };
 
 layout (std430, binding = 5) writeonly buffer Values {
@@ -99,6 +99,7 @@ void main() {
     screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
     
     // TODO: prepend key with tile id once we implement tiled
-    keys[idx] = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z); // use -depth as sorting key (finally found a use for this function lol)
+    uint depth_key = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z);
+    keys[idx].y = ; // use -depth as sorting key (finally found a use for this function lol)
     values[idx] = idx;
 }
