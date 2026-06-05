@@ -81,6 +81,7 @@ namespace Renderer {
         alignas(8)  glm::mat2 cov;
         alignas(16) glm::vec4 color;
         alignas(8)  glm::vec2 offsets[4];
+        alignas(4)  glm::uint depth;
     };
 
     struct alignas(4) SSBDrawArraysIndirectCommand {

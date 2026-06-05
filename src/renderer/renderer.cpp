@@ -69,6 +69,7 @@ namespace Renderer {
     unsigned int g_valuesA_SSBO;
     unsigned int g_valuesB_SSBO;
     unsigned int g_histogram_SSBO;
+    unsigned int g_numkeys_SSBO;
     
     unsigned int g_key_buffer_size;
     unsigned int g_num_key_blocks;
@@ -243,29 +244,25 @@ namespace Renderer {
         
         
         // Init buffers for splat sorting
-        g_key_buffer_size = std::max(SPLAT_KEY_BLOCK_SIZE, std::bit_ceil(g_num_splats));  // Ensure keys buffer size is power of 2 to simplify radix sort
-        g_num_key_blocks = (g_key_buffer_size + SPLAT_KEY_BLOCK_SIZE - 1) / SPLAT_KEY_BLOCK_SIZE;
-        g_histogram_size = g_num_key_blocks * SPLAT_SORT_NUM_DIGITS;
-        
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys, initialize all to max value
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysB_SSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, g_keysB_SSBO);
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_valuesA_SSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
         
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_valuesB_SSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, g_valuesB_SSBO);
         
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_histogram_SSBO);  // Digit histogram
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint) * g_histogram_size, nullptr, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, g_histogram_SSBO);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_numkeys_SSBO);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint), nullptr, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, g_numkeys_SSBO);
 
         // Debug labels
         glObjectLabel(GL_BUFFER, g_splatSSBO, -1, "splat_SSBO");
@@ -290,6 +287,13 @@ namespace Renderer {
                     {ShaderType::Compute}, {comp_path}
         };
         add_program("project_splats", proj_program);
+
+        std::string keys_path = Config::get_value(Config::ConfigGroup::Shaders, "radix_sort", "create_keys");
+        ShaderProgram keys_program = ShaderProgram{
+                {ShaderType::Compute}, {keys_path}
+        };
+        add_program("create_keys", keys_program);
+
         ShaderProgram render_program = ShaderProgram{
                     {ShaderType::Vertex, ShaderType::Fragment},
                     {vert_path, frag_path}
@@ -475,10 +479,7 @@ namespace Renderer {
 
         const Camera& main_camera = World::get_main_camera();
         
-        // Pad initial keys buffer with max uint for sorting
-        unsigned int fill = 0xFFFFFFFF;
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);
-        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
+
         
         // Bind key buffers to starting locations
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
@@ -492,13 +493,40 @@ namespace Renderer {
         g_active_program->set_vec3("uCameraPos", main_camera.transform.position);
         g_active_program->set_uint("uNumSplats", g_num_splats);
         g_active_program->set_vec2("uTanFov", main_camera.tan_fov());
+        g_active_program->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
+
+        // TODO: add create_keys here
         
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
         glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);
         glDispatchCompute((g_num_splats + WG_SIZE - 1) / WG_SIZE, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
-        
+
+        void* num_keys_ptr = glMapNamedBufferRange(g_numkeys_SSBO, 0, sizeof(glm::uint), GL_MAP_READ_BIT);
+        std::memcpy(&g_key_buffer_size, num_keys_ptr, sizeof(glm::uint));
+        glUnmapNamedBuffer(g_numkeys_SSBO);
+
+        g_key_buffer_size = std::max(SPLAT_KEY_BLOCK_SIZE, std::bit_ceil(g_key_buffer_size));  // Ensure keys buffer size is power of 2 to simplify radix sort
+        g_num_key_blocks = (g_key_buffer_size + SPLAT_KEY_BLOCK_SIZE - 1) / SPLAT_KEY_BLOCK_SIZE;
+        g_histogram_size = g_num_key_blocks * SPLAT_SORT_NUM_DIGITS;
+
+        // Allocate key/value buffer sizes based on # of keys
+        glNamedBufferData(g_keysA_SSBO, sizeof(glm::uvec2) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_keysB_SSBO, sizeof(glm::uvec2) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_valuesA_SSBO, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_valuesB_SSBO, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_histogram_SSBO, sizeof(glm::uint) * g_histogram_size, nullptr, GL_DYNAMIC_DRAW);
+
+        // Pad initial keys buffer with max uint for sorting
+        unsigned int fill = 0xFFFFFFFF;
+        glClearNamedBufferData(g_keysA_SSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
+
+        // Create tile-based depth-sort keys
+        use_program("create_keys");
+        g_active_program->set_uint("uNumSplats", g_num_splats);
+        g_active_program->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
+
         // Radix sort
         _sort_splats();
 

@@ -10,9 +10,5 @@ struct ScreenSplat {
     mat2 cov;
     vec4 color;
     vec2 offsets[4];
-};
-
-struct TileInfo {
-    uint key_offset;
-    uint key_count;
+    uint depth;
 };

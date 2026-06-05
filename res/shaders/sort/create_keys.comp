@@ -1,0 +1,44 @@
+﻿#version 460
+
+#include "common/structs.glsl"
+#include "common/tiles.glsl"
+
+#define NUM_THREADS 256
+
+layout (local_size_x = NUM_THREADS) in;
+
+layout (std430, binding = 0) buffer ScreenSplats {
+    ScreenSplat screen_splats[];
+};
+
+layout (std430, binding = 3) buffer InputKeys {
+    uvec2 keys[];
+};
+
+uniform uint uNumSplats;
+uniform vec2 uResolution;
+
+shared uint sKeysWritten;
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= uNumSplats) return;
+
+    // TODO: write keys
+
+    vec2 tl = screen_splats[idx].center + screen_splats[idx].offsets[1];
+    vec2 br = screen_splats[idx].center + screen_splats[idx].offsets[2];
+    uvec2 tl_tile = tile_pos_from_ndc(tl, tile_res);
+    uvec2 br_tile = tile_pos_from_ndc(br, tile_res);
+
+    uvec2 tile_res = tile_res(uResolution);
+    uint offset = atomicAdd(sKeysWritten, num_tiles_in_quad_pos(tl_tile, br_tile, tile_res));  // Reserve space in keys buffer, one key per tile
+    uint width = br_tile.x - tl_tile.x + 1;
+
+    for (uint y = br_tile.y; y <= tl_tile.y; ++x) {
+        for (uint x = tl_tile.x; x <= br_tile.x; ++y) {
+            uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res);
+            keys[offset + (y * width + x)] = uvec2(tile_id, screen_splats[idx].depth);
+        }
+    }
+}

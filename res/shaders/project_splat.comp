@@ -5,6 +5,7 @@
 
 #include "utils/quat.glsl"
 #include "common/structs.glsl"
+#include "common/tiles.glsl"
 
 // How many standard deviations away from the splat center should the quad boundaries be
 #define SPLAT_QUAD_SCALE 3.0
@@ -28,12 +29,8 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
     uint baseInstance;
 } draw_args;
 
-layout (std430, binding = 3) writeonly buffer Keys {
-    uvec2 keys[];
-};
-
-layout (std430, binding = 5) writeonly buffer Values {
-    uint values[];
+layout (std430, binding = 8) buffer NumKeys {
+    uint num_keys;
 };
 
 uniform uint uNumSplats;
@@ -41,6 +38,7 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 uniform vec3 uCameraPos;
 uniform vec2 uTanFov;
+uniform vec2 uResolution;
 
 /** Calculates A such that the 3D Covariance matrix is equal to AA^T */
 mat3 A_3d(Splat splat) {
@@ -97,9 +95,11 @@ void main() {
 
     // Screen-space quad vertex offsets
     screen_splats[idx].offsets = vec2[4](s, s * vec2(-1.0, 1.0), s * vec2(1.0, -1.0), s * -1.0);
-    
-    // TODO: prepend key with tile id once we implement tiled
-    uint depth_key = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z);
-    keys[idx].y = ; // use -depth as sorting key (finally found a use for this function lol)
-    values[idx] = idx;
+
+    // Depth-sort key
+    screen_splats[idx].depth = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z);  // use -depth as sorting key (finally found a use for this function lol)
+
+    vec2 tl = (s * vec2(-1.0,  1.0)) + screen_splats[idx].center;
+    vec2 br = (s * vec2( 1.0, -1.0)) + screen_splats[idx].center;
+    atomicAdd(num_keys, num_tiles_in_quad_ndc(tile_res(uResolution)));  // One key per tile per splat
 }
