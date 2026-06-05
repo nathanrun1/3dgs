@@ -12,3 +12,8 @@ struct ScreenSplat {
     vec2 offsets[4];
     uint depth;
 };
+
+struct TileInfo {
+    uint key_offset;
+    uint key_count;
+};
