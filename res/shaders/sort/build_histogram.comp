@@ -10,7 +10,7 @@
 layout (local_size_x = BLOCK_SIZE) in;
 
 layout (std430, binding = 3) readonly buffer Keys {
-    uint keys[];
+    uvec2 keys[];
 };
 
 layout (std430, binding = 7) buffer Histogram {
@@ -29,7 +29,7 @@ void main() {
     local_frequencies[tid] = 0; // Each thread zeroes ceil(BLOCK_SIZE / NUM_DIGITS) bin(s)
     barrier(); // Sync threads (e.g. otherwise frequency modified before another thread zeroes it)
     
-    uint key = keys[key_index(wid, tid, BLOCK_SIZE)];
+    uvec2 key = keys[key_index(wid, tid, BLOCK_SIZE)];
     uint digit = digit_value(key, DIGIT_SIZE, uDigitId);
     atomicAdd(local_frequencies[digit], 1);
     barrier();

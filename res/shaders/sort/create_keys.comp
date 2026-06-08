@@ -7,11 +7,11 @@
 
 layout (local_size_x = NUM_THREADS) in;
 
-layout (std430, binding = 0) buffer ScreenSplats {
+layout (std430, binding = 0) readonly buffer ScreenSplats {
     ScreenSplat screen_splats[];
 };
 
-layout (std430, binding = 3) buffer InputKeys {
+layout (std430, binding = 3) writeonly buffer InputKeys {
     uvec2 keys[];
 };
 
@@ -33,8 +33,8 @@ void main() {
 
     uvec2 tile_res = tile_res(uResolution);
     uint offset = atomicAdd(sKeysWritten, num_tiles_in_quad_pos(tl_tile, br_tile, tile_res));  // Reserve space in keys buffer, one key per tile
-    uint width = br_tile.x - tl_tile.x + 1;
 
+    uint width = br_tile.x - tl_tile.x + 1;
     for (uint y = br_tile.y; y <= tl_tile.y; ++x) {
         for (uint x = tl_tile.x; x <= br_tile.x; ++y) {
             uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res);

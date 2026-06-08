@@ -10,10 +10,10 @@
 layout (local_size_x = BLOCK_SIZE) in;
 
 layout (std430, binding = 3) readonly buffer KeysIn {
-    uint keys_in[];
+    uvec2 keys_in[];
 };
 layout (std430, binding = 4) writeonly buffer KeysOut {
-    uint keys_out[];
+    uvec2 keys_out[];
 };
 
 layout (std430, binding = 5) readonly buffer ValuesIn {
@@ -28,12 +28,11 @@ layout (std430, binding = 7) readonly buffer Histogram {
 };
 
 
-
 shared uint decode_A[BLOCK_SIZE * 2];
 shared uint decode_B[BLOCK_SIZE * 2];
 
-shared uint lkeys_A[BLOCK_SIZE];
-shared uint lkeys_B[BLOCK_SIZE];
+shared uvec2 lkeys_A[BLOCK_SIZE];
+shared uvec2 lkeys_B[BLOCK_SIZE];
 
 shared uint lvalues_A[BLOCK_SIZE];
 shared uint lvalues_B[BLOCK_SIZE];
@@ -52,7 +51,7 @@ void main() {
 
     // LSD radix sort per bit
     for (uint i = 0; i < DIGIT_SIZE; ++i) {
-        uint key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
+        uvec2 key = i % 2 == 0 ? lkeys_A[tid] : lkeys_B[tid];
         uint bit = (digit_value(key, DIGIT_SIZE, uDigitId) & (1u << i)) >> i;
 
         // Decode 0-bit and 1-bit element positions
