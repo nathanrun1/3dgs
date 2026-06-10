@@ -13,14 +13,11 @@ layout (std430, binding = 6) readonly buffer SortedSplatIndices {
     uint sorted_indices[];
 };
 
-layout (std430, binding = 8) readonly buffer TileKeyInfo {
-    TileInfo tile_info[];
-};
-
 uniform vec3 uBackgroundColor;
 
 in vec2 vPos;
-in uint vTileId;
+flat in uint vKeyBegin;
+flat in uint vKeyEnd;
 out vec4 fragColor;
 
 vec3 alpha_blend(vec3 dst, vec3 src, float alpha) {
@@ -30,10 +27,8 @@ vec3 alpha_blend(vec3 dst, vec3 src, float alpha) {
 void main() {
     vec4 final_color = vec4(uBackgroundColor, 1.0);
     
-    TileInfo tinfo = tile_info[vTileId];
-    
     // Manually alpha blend all splats within the tile
-    for (uint i = tinfo.key_offset; i < tinfo.key_offset + tinfo.key_count; ++i) {
+    for (uint i = vKeyBegin; i < vKeyEnd; ++i) {
         uint sid = sorted_indices[i];
         mat2 cov = screen_splats[sid].cov;
         float pdf = unnormalized_bivariate_pdf(vPos - screen_splats[sid].center, cov);

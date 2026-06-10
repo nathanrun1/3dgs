@@ -487,15 +487,14 @@ namespace Renderer {
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, g_valuesB_SSBO);
 
+        // Project splats to screen space & count total sorting keys (splat * tiles/splat)
         use_program("project_splats");
         g_active_program->set_mat4("uProjection", main_camera.get_proj_matrix());
         g_active_program->set_mat4("uView", main_camera.get_view_matrix());
         g_active_program->set_vec3("uCameraPos", main_camera.transform.position);
         g_active_program->set_uint("uNumSplats", g_num_splats);
         g_active_program->set_vec2("uTanFov", main_camera.tan_fov());
-        g_active_program->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
-
-        // TODO: add create_keys here
+        g_active_program->set_uvec2("uResolution", glm::uvec2(GLFW::get_window_width(), GLFW::get_window_height()));
         
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
@@ -503,15 +502,16 @@ namespace Renderer {
         glDispatchCompute((g_num_splats + WG_SIZE - 1) / WG_SIZE, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
+        // Read back key count
         void* num_keys_ptr = glMapNamedBufferRange(g_numkeys_SSBO, 0, sizeof(glm::uint), GL_MAP_READ_BIT);
         std::memcpy(&g_key_buffer_size, num_keys_ptr, sizeof(glm::uint));
         glUnmapNamedBuffer(g_numkeys_SSBO);
 
+        // Allocate key/value buffer sizes based on key count
         g_key_buffer_size = std::max(SPLAT_KEY_BLOCK_SIZE, std::bit_ceil(g_key_buffer_size));  // Ensure keys buffer size is power of 2 to simplify radix sort
         g_num_key_blocks = (g_key_buffer_size + SPLAT_KEY_BLOCK_SIZE - 1) / SPLAT_KEY_BLOCK_SIZE;
         g_histogram_size = g_num_key_blocks * SPLAT_SORT_NUM_DIGITS;
 
-        // Allocate key/value buffer sizes based on # of keys
         glNamedBufferData(g_keysA_SSBO, sizeof(glm::uvec2) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glNamedBufferData(g_keysB_SSBO, sizeof(glm::uvec2) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
         glNamedBufferData(g_valuesA_SSBO, sizeof(glm::uint) * g_key_buffer_size, nullptr, GL_DYNAMIC_DRAW);
@@ -525,11 +525,12 @@ namespace Renderer {
         // Create tile-based depth-sort keys
         use_program("create_keys");
         g_active_program->set_uint("uNumSplats", g_num_splats);
-        g_active_program->set_vec2("uResolution", glm::vec2(GLFW::get_window_width(), GLFW::get_window_height()));
+        g_active_program->set_uvec2("uResolution", glm::uvec2(GLFW::get_window_width(), GLFW::get_window_height()));
 
-        // Radix sort
+        // Radix sort the keys
         _sort_splats();
 
+        // Draw the splats
         std::cout << "render pass" << std::endl;
         use_program("render_splats");
         g_active_program->set_mat4("uView", main_camera.get_view_matrix());

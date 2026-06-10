@@ -105,6 +105,10 @@ void ShaderProgram::set_vec2(const std::string& uniform, const glm::vec2 value) 
     glUniform2fv(glGetUniformLocation(m_id, uniform.c_str()), 1, glm::value_ptr(value));
 }
 
+void ShaderProgram::set_uvec2(const std::string& uniform, const glm::uvec2 value) const {
+    glUniform2uiv(glGetUniformLocation(m_id, uniform.c_str()), 1, glm::value_ptr(value));
+}
+
 unsigned int ShaderProgram::get_id() const {
     return m_id;
 }

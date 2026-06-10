@@ -29,8 +29,8 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
     uint baseInstance;
 } draw_args;
 
-layout (std430, binding = 8) buffer NumKeys {
-    uint num_keys;
+layout (std430, binding = 8) buffer TileHistogram {
+    uint tile_histogram[];
 };
 
 uniform uint uNumSplats;
@@ -38,7 +38,7 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 uniform vec3 uCameraPos;
 uniform vec2 uTanFov;
-uniform vec2 uResolution;
+uniform uvec2 uResolution;
 
 /** Calculates A such that the 3D Covariance matrix is equal to AA^T */
 mat3 A_3d(Splat splat) {
@@ -99,7 +99,18 @@ void main() {
     // Depth-sort key
     screen_splats[idx].depth = clip.z >= 0 ? 0x80000000 - floatBitsToUint(clip.z) : floatBitsToUint(clip.z);  // use -depth as sorting key (finally found a use for this function lol)
 
+    // Record tile histogram:
     vec2 tl = (s * vec2(-1.0,  1.0)) + screen_splats[idx].center;
     vec2 br = (s * vec2( 1.0, -1.0)) + screen_splats[idx].center;
-    atomicAdd(num_keys, num_tiles_in_quad_ndc(tile_res(uResolution)));  // One key per tile per splat
+
+    uvec2 tile_res = tile_res(uResolution);
+    uvec2 tl_tile = tile_pos_from_ndc(tl, tile_res);
+    uvec2 br_tile = tile_pos_from_ndc(br, tile_res);
+
+    for (uint y = br_tile.y; y <= tl_tile.y; ++x) {
+        for (uint x = tl_tile.x; x <= br_tile.x; ++y) {
+            uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res.x);
+            atomicAdd(tile_histogram[tile_id], 1);
+        }
+    }
 }

@@ -12,33 +12,55 @@ layout (std430, binding = 0) readonly buffer ScreenSplats {
 };
 
 layout (std430, binding = 3) writeonly buffer InputKeys {
+    uint count;
     uvec2 keys[];
-};
+} input_keys;
 
 uniform uint uNumSplats;
-uniform vec2 uResolution;
+uniform uvec2 uResolution;
 
-shared uint sKeysWritten;
+shared uint sKeysToWrite;
+shared uint sGlobalOffset;
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    if (idx >= uNumSplats) return;
+    uint local_idx = gl_LocalInvocationIndex;
 
-    // TODO: write keys
+    if (local_idx == 0) {
+        sKeysToWrite = 0;
+    }
+    barrier();
 
-    vec2 tl = screen_splats[idx].center + screen_splats[idx].offsets[1];
-    vec2 br = screen_splats[idx].center + screen_splats[idx].offsets[2];
-    uvec2 tl_tile = tile_pos_from_ndc(tl, tile_res);
-    uvec2 br_tile = tile_pos_from_ndc(br, tile_res);
-
+    uint keys_for_splat = 0;
+    uvec2 tl_tile = uvec2(0);
+    uvec2 br_tile = uvec2(0);
     uvec2 tile_res = tile_res(uResolution);
-    uint offset = atomicAdd(sKeysWritten, num_tiles_in_quad_pos(tl_tile, br_tile, tile_res));  // Reserve space in keys buffer, one key per tile
 
-    uint width = br_tile.x - tl_tile.x + 1;
-    for (uint y = br_tile.y; y <= tl_tile.y; ++x) {
-        for (uint x = tl_tile.x; x <= br_tile.x; ++y) {
-            uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res);
-            keys[offset + (y * width + x)] = uvec2(tile_id, screen_splats[idx].depth);
+    if (idx < uNumSplats) {
+        vec2 tl = screen_splats[idx].center + screen_splats[idx].offsets[1];
+        vec2 br = screen_splats[idx].center + screen_splats[idx].offsets[2];
+        tl_tile = tile_pos_from_ndc(tl, tile_res);
+        br_tile = tile_pos_from_ndc(br, tile_res);
+        keys_for_splat = num_tiles_in_quad_pos(tl_tile, br_tile, tile_res);
+    }
+
+    uint local_offset = atomicAdd(sKeysToWrite, keys_for_splat);  // Reserve space for keys for this splat within this WG's block
+    barrier();
+
+    if (local_idx == 0 && sKeysToWrite > 0) {
+        sGlobalOffset = atomicAdd(input_keys.count, sKeysToWrite);  // Reserve this WG's space in key buffer
+    }
+    barrier();
+
+    if (keys_for_splat > 0) {
+        uint width = br_tile.x - tl_tile.x + 1;
+        uint cnt = 0;
+        for (uint y = br_tile.y; y <= tl_tile.y; ++y) {
+            for (uint x = tl_tile.x; x <= br_tile.x; ++x) {
+                uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res.x);
+                input_keys.keys[sGlobalOffset + local_offset + cnt] = uvec2(tile_id, screen_splats[idx].depth);
+                cnt += 1;
+            }
         }
     }
 }

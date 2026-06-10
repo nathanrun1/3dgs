@@ -32,6 +32,7 @@ public:
     void set_uint(const std::string& uniform, const unsigned int& value) const;
     void set_vec3(const std::string& uniform, const glm::vec3 value) const;
     void set_vec2(const std::string& uniform, const glm::vec2 value) const;
+    void set_uvec2(const std::string& uniform, const glm::uvec2 value) const;
 
     /** Retrieve the shader program's id */
     unsigned int get_id() const;

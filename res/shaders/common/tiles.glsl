@@ -5,6 +5,12 @@ uvec2 tile_res(uvec2 resolution) {
     return (resolution + TILE_DIM - 1) / TILE_DIM;
 }
 
+/** Calculates screen's total tile count */
+uint tile_count(uvec2 resolution) {
+    uvec2 t_res = tile_res(resolution);
+    return t_res.x * t_res.y;
+}
+
 /** Converts tile ID to tile position */
 uvec2 tile_pos_from_id(uint tile_id, uvec2 tile_res) {
     return uvec2(tile_id % tile_res.x, tile_id / tile_res.x);
