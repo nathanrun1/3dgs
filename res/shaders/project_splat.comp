@@ -29,7 +29,7 @@ layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
     uint baseInstance;
 } draw_args;
 
-layout (std430, binding = 8) buffer TileHistogram {
+layout (std430, binding = 3) buffer TileHistogram {
     uint tile_histogram[];
 };
 
@@ -76,10 +76,12 @@ void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= uNumSplats) return;
 
+    if (idx == 0) {
+        draw_args.instanceCount = tile_count(uResolution);  // One instance per tile
+    }
+
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
     if (view_pos.z > 0.1) return;
-
-    atomicAdd(draw_args.instanceCount, 1);
 
     mat2 cov = cov_2d(splats[idx], view_pos);
 

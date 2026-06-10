@@ -33,6 +33,13 @@ extern "C" {
 }
 #endif
 
+/** Calculates # of tiles on the screen assuming tile width & height equals `tile_dim`, where screen resolution is `w`x`h` */
+unsigned int num_tiles(unsigned int tile_dim, unsigned int w, unsigned int h) {
+    unsigned int res_x = (w + tile_dim - 1) / tile_dim;
+    unsigned int res_y = (h + tile_dim - 1) / tile_dim;
+    return res_x * res_y;
+}
+
 namespace Renderer {
     const unsigned int SPLAT_KEY_BLOCK_SIZE = 256;
     const unsigned int SPLAT_SORT_DIGIT_SIZE = 8;
@@ -41,6 +48,9 @@ namespace Renderer {
     
     const unsigned int SPLAT_SCAN_BLOCK_SIZE = 512;
     const unsigned int SPLAT_TOP_SCAN_BLOCK_SIZE = 2048;
+
+    const unsigned int TILE_DIM = 16;
+    const unsigned int TILE_SCAN_BLOCK_SIZE = 256;
     
     std::unordered_map<std::string, ShaderProgram> g_available_programs;
     ShaderProgram* g_active_program = nullptr;
@@ -69,14 +79,15 @@ namespace Renderer {
     unsigned int g_valuesA_SSBO;
     unsigned int g_valuesB_SSBO;
     unsigned int g_histogram_SSBO;
-    unsigned int g_numkeys_SSBO;
+    unsigned int g_tilehist_SSBO;
+    unsigned int g_tile_scan_block_sum_SSBO;
     
     unsigned int g_key_buffer_size;
     unsigned int g_num_key_blocks;
     unsigned int g_histogram_size;
+    unsigned int g_num_tiles;
 
     unsigned int g_emptyVAO;
-
 
     unsigned int _texture_format(const int n_channels) {
         switch (n_channels) {
@@ -212,6 +223,8 @@ namespace Renderer {
         glGenBuffers(1, &g_valuesA_SSBO);
         glGenBuffers(1, &g_valuesB_SSBO);
         glGenBuffers(1, &g_histogram_SSBO);
+        glGenBuffers(1, &g_tilehist_SSBO);
+        glGenBuffers(1, &g_tile_scan_block_sum_SSBO);
         glGenVertexArrays(1, &g_emptyVAO);
     }
     
@@ -242,27 +255,20 @@ namespace Renderer {
         glBufferData(GL_DRAW_INDIRECT_BUFFER, sizeof(SSBDrawArraysIndirectCommand), &cmd, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, g_splat_INDB);
         
-        
-        // Init buffers for splat sorting
+
+        // Init buffers for splat sorting and tile-based logic
+        g_num_tiles = num_tiles(TILE_DIM, GLFW::get_window_width(), GLFW::get_window_height());
+        unsigned int num_tile_scan_blocks = (g_num_tiles + TILE_SCAN_BLOCK_SIZE - 1) / TILE_SCAN_BLOCK_SIZE;
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
-
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysB_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, g_keysB_SSBO);
-
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_valuesA_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
-        
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_valuesB_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, g_valuesB_SSBO);
-        
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_histogram_SSBO);  // Digit histogram
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, g_histogram_SSBO);
-
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_numkeys_SSBO);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(glm::uint), nullptr, GL_DYNAMIC_DRAW);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, g_numkeys_SSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tilehist_SSBO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tile_scan_block_sum_SSBO);
+        glNamedBufferData(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tiles, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_tile_scan_block_sum_SSBO, sizeof(glm::uint) * num_tile_scan_blocks, nullptr, GL_DYNAMIC_DRAW);
 
         // Debug labels
         glObjectLabel(GL_BUFFER, g_splatSSBO, -1, "splat_SSBO");
@@ -274,6 +280,9 @@ namespace Renderer {
         glObjectLabel(GL_BUFFER, g_valuesA_SSBO, -1, "valuesA_SSBO");
         glObjectLabel(GL_BUFFER, g_valuesB_SSBO, -1, "valuesB_SSBO");
         glObjectLabel(GL_BUFFER, g_histogram_SSBO, -1, "histogram_SSBO");
+
+        glObjectLabel(GL_BUFFER, g_tilehist_SSBO, -1, "tilehist_SSBO");
+        glObjectLabel(GL_BUFFER, g_tile_scan_block_sum_SSBO, -1, "tile_scan_block_sum_SSBO");
     }
     
     void _init_programs() {
@@ -443,7 +452,7 @@ namespace Renderer {
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, A_in ? g_valuesB_SSBO : g_valuesA_SSBO);
             
             unsigned int fill = 0; // Reset histogram
-            glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
+            glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);  // TODO: redundant? build_histogram comp does this too
 
 
             // Build digit histogram
@@ -478,16 +487,11 @@ namespace Renderer {
         // ImGui::End();
 
         const Camera& main_camera = World::get_main_camera();
-        
-
-        
-        // Bind key buffers to starting locations
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, g_keysB_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, g_valuesA_SSBO);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, g_valuesB_SSBO);
 
         // Project splats to screen space & count total sorting keys (splat * tiles/splat)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, g_screen_splatSSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_splatSSBO);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_tilehist_SSBO);
         use_program("project_splats");
         g_active_program->set_mat4("uProjection", main_camera.get_proj_matrix());
         g_active_program->set_mat4("uView", main_camera.get_view_matrix());
@@ -502,10 +506,23 @@ namespace Renderer {
         glDispatchCompute((g_num_splats + WG_SIZE - 1) / WG_SIZE, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
-        // Read back key count
-        void* num_keys_ptr = glMapNamedBufferRange(g_numkeys_SSBO, 0, sizeof(glm::uint), GL_MAP_READ_BIT);
+        // TODO: impl. inclusive tile histogram scan
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_tile_scan_block_sum_SSBO);
+        // use_program(...) // scan
+        // set uniforms
+        // glDispatchCompute((g_num_tiles + TILE_SCAN_BLOCK_SIZE - 1) / TILE_SCAN_BLOCK_SIZE, 1, 1);
+        // probably a barrier
+        // use_program(...) // scan block sums
+        // glDispatchCompute(1, 1, 1); // assumes BLOCK_SIZE^2 covers full tile res, reasonable assumption but note it
+        // another barrier?
+        // use_program(...) // scatter block sums
+        // glDispatchCompute([same as scan])
+        // and another barrier
+
+        // Read back key count (last element in prefix-scanned histogram)
+        void* num_keys_ptr = glMapNamedBufferRange(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tiles - 1, sizeof(glm::uint), GL_MAP_READ_BIT);
         std::memcpy(&g_key_buffer_size, num_keys_ptr, sizeof(glm::uint));
-        glUnmapNamedBuffer(g_numkeys_SSBO);
+        glUnmapNamedBuffer(g_tilehist_SSBO);
 
         // Allocate key/value buffer sizes based on key count
         g_key_buffer_size = std::max(SPLAT_KEY_BLOCK_SIZE, std::bit_ceil(g_key_buffer_size));  // Ensure keys buffer size is power of 2 to simplify radix sort
@@ -523,19 +540,19 @@ namespace Renderer {
         glClearNamedBufferData(g_keysA_SSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &fill);
 
         // Create tile-based depth-sort keys
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
         use_program("create_keys");
-        g_active_program->set_uint("uNumSplats", g_num_splats);
+        g_active_program->set_uint("uNumKeys", g_num_splats);
         g_active_program->set_uvec2("uResolution", glm::uvec2(GLFW::get_window_width(), GLFW::get_window_height()));
 
         // Radix sort the keys
         _sort_splats();
 
         // Draw the splats
-        std::cout << "render pass" << std::endl;
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_tilehist_SSBO);
         use_program("render_splats");
-        g_active_program->set_mat4("uView", main_camera.get_view_matrix());
-        g_active_program->set_mat4("uProj", main_camera.get_proj_matrix());
-        g_active_program->set_vec3("uCameraPos", main_camera.transform.position);
+        g_active_program->set_uvec2("uResolution", glm::uvec2(GLFW::get_window_width(), GLFW::get_window_height()));
+        g_active_program->set_uint("uNumkeys", g_key_buffer_size);
         g_active_program->set_vec3("uBackgroundColor", main_camera.get_background_color());
 
         glBindVertexArray(g_emptyVAO);
