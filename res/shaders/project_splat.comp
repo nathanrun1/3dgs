@@ -109,8 +109,8 @@ void main() {
     uvec2 tl_tile = tile_pos_from_ndc(tl, tile_res);
     uvec2 br_tile = tile_pos_from_ndc(br, tile_res);
 
-    for (uint y = br_tile.y; y <= tl_tile.y; ++x) {
-        for (uint x = tl_tile.x; x <= br_tile.x; ++y) {
+    for (uint y = br_tile.y; y <= tl_tile.y; ++y) {
+        for (uint x = tl_tile.x; x <= br_tile.x; ++x) {
             uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res.x);
             atomicAdd(tile_histogram[tile_id], 1);
         }

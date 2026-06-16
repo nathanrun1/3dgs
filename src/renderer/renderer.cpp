@@ -267,7 +267,7 @@ namespace Renderer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_histogram_SSBO);  // Digit histogram
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tilehist_SSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tile_scan_block_sum_SSBO);
-        glNamedBufferData(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tiles, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_tilehist_SSBO, sizeof(glm::uint) * num_tile_scan_blocks * TILE_SCAN_BLOCK_SIZE, nullptr, GL_DYNAMIC_DRAW);
         glNamedBufferData(g_tile_scan_block_sum_SSBO, sizeof(glm::uint) * num_tile_scan_blocks, nullptr, GL_DYNAMIC_DRAW);
 
         // Debug labels
@@ -446,6 +446,7 @@ namespace Renderer {
 
             // Swap key/value buffers (3/5 in, 4/6 out)
             bool A_in = i % 2 == 0;
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, g_histogram_SSBO);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, A_in ? g_keysA_SSBO : g_keysB_SSBO);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, A_in ? g_keysB_SSBO : g_keysA_SSBO);
             glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, A_in ? g_valuesA_SSBO : g_valuesB_SSBO);
@@ -503,6 +504,7 @@ namespace Renderer {
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
         glm::uint zero = 0;
         glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &zero);
+        glClearNamedBufferData(g_tilehist_SSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
         glDispatchCompute((g_num_splats + WG_SIZE - 1) / WG_SIZE, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 

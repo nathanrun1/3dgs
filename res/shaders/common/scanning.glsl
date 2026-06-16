@@ -1,4 +1,4 @@
-layout (std430, binding = 7) buffer Histogram {
+layout (std430, binding = 2) buffer Histogram {
     uint frequencies[];
 };
 
