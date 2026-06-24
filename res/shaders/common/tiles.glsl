@@ -1,4 +1,4 @@
-﻿#define TILE_DIM 16
+#define TILE_DIM 16
 
 /** Calculates tile resolution (how many tiles per axis) */
 uvec2 tile_res(uvec2 resolution) {
@@ -34,7 +34,7 @@ uint tile_id_from_ndc(vec2 ndc, uvec2 tile_res) {
 
 /** Bottom left NDC of tile with given ID */
 vec2 tile_offset(uint tile_id, uvec2 tile_res) {
-    vec2 tile_pos = vec2(tile_pos_from_id(tile_id));
+    vec2 tile_pos = vec2(tile_pos_from_id(tile_id, tile_res));
     return (tile_pos / vec2(tile_res)) * 2.0 - 1.0;
 }
 

@@ -1,0 +1,36 @@
+#version 460
+
+#include "common/scanning.glsl"
+
+#define NUM_THREADS 256
+#define LOCAL_ARR_SIZE 256  // = NUM_THREADS
+#define NUM_STRIDES 8  // = log_2(NUM_THREADS)
+
+// Inclusive Hillis-Steele prefix scan - scatter
+//   Algorithm retrieved from (and modified): https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda#:~:text=A%20Naive%20Parallel%20Scan
+
+layout (local_size_x = NUM_THREADS) in;
+
+layout (std430, binding = 1) buffer BlockSum {
+    uint block_sum[];
+};
+
+layout (std430, binding = 3) buffer TileHistogram {
+    uint tile_histogram[];
+};
+
+shared uint s_block_sum;
+
+void main() {
+    uint tid = gl_LocalInvocationID.x;
+    uint gid = gl_GlobalInvocationID.x;
+    uint wid = gl_WorkGroupID.x;
+
+    tile_histogram[gid] += block_sum[wid];
+    barrier();
+
+    // Convert to exclusive
+    uint prev_sum = gid == 0 ? 0 : tile_histogram[gid - 1];
+    barrier();
+    tile_histogram[gid] = prev_sum;
+}

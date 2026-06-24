@@ -4,7 +4,7 @@
 #define LOCAL_ARR_SIZE 256  // = NUM_THREADS
 #define NUM_STRIDES 8  // = log_2(NUM_THREADS)
 
-// Inclusive Hillis-Steele prefix scan - local block scan
+// Inclusive Hillis-Steele prefix scan - block sum scan
 //   Algorithm retrieved from (and modified): https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda#:~:text=A%20Naive%20Parallel%20Scan
 
 layout (local_size_x = NUM_THREADS) in;
@@ -13,21 +13,16 @@ layout (std430, binding = 1) buffer BlockSum {
     uint block_sum[];
 };
 
-layout (std430, binding = 3) buffer TileHistogram {
-    uint tile_histogram[];
-};
-
 shared uint local_A[LOCAL_ARR_SIZE];
 shared uint local_B[LOCAL_ARR_SIZE];
 
 void main() {
     uint tid = gl_LocalInvocationID.x;
-    uint wid = gl_WorkGroupID.x;
-    uint gid = gl_GlobalInvocationID.x;
 
-    local_A[tid] = tile_histogram[gid];
+    local_A[tid] = block_sum[tid];
     barrier();
 
+    // Inclusive scan
     for (uint stride = 1; stride < LOCAL_ARR_SIZE; stride <<= 1) {
         if (findLSB(stride) % 2 == 0) {
             local_B[tid] = local_A[tid] + (tid >= stride ? local_A[tid - stride] : 0);
@@ -37,11 +32,10 @@ void main() {
         barrier();
     }
 
+    // Convert to exclusive, write back
     if (LOCAL_ARR_SIZE % 2 == 0) {
-        block_sum[wid] = local_B[LOCAL_ARR_SIZE - 1];
-        tile_histogram[gid] = local_B[tid];
+        block_sum[tid] = tid == 0 ? 0 : local_B[tid - 1];
     } else {
-        block_sum[wid] = local_A[LOCAL_ARR_SIZE - 1];
-        tile_histogram[gid] = local_A[tid];
+        block_sum[tid] = tid == 0 ? 0 : local_A[tid - 1];
     }
 }

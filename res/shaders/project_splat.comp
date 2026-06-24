@@ -1,5 +1,4 @@
 #version 460
-//#extension GL_ARB_gpu_shader_int64 : enable
 
 #define STB_INCLUDE_LINE_GLSL
 

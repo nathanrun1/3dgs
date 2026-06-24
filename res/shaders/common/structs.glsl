@@ -1,4 +1,4 @@
-﻿struct Splat {
+struct Splat {
     vec3 position;
     vec4 rotation;
     vec3 scale;

@@ -1,4 +1,4 @@
-﻿#version 460
+#version 460
 
 #include "common/structs.glsl"
 #include "common/tiles.glsl"
@@ -11,10 +11,11 @@ layout (std430, binding = 0) readonly buffer ScreenSplats {
     ScreenSplat screen_splats[];
 };
 
+layout (binding = 1, offset = 0) uniform atomic_uint key_count;
+
 layout (std430, binding = 3) writeonly buffer InputKeys {
-    uint count;
     uvec2 keys[];
-} input_keys;
+};
 
 uniform uint uNumSplats;
 uniform uvec2 uResolution;
@@ -48,7 +49,7 @@ void main() {
     barrier();
 
     if (local_idx == 0 && sKeysToWrite > 0) {
-        sGlobalOffset = atomicAdd(input_keys.count, sKeysToWrite);  // Reserve this WG's space in key buffer
+        sGlobalOffset = atomicCounterAdd(key_count, sKeysToWrite);  // Reserve this WG's space in key buffer
     }
     barrier();
 
@@ -58,7 +59,7 @@ void main() {
         for (uint y = br_tile.y; y <= tl_tile.y; ++y) {
             for (uint x = tl_tile.x; x <= br_tile.x; ++x) {
                 uint tile_id = tile_id_from_pos(uvec2(x, y), tile_res.x);
-                input_keys.keys[sGlobalOffset + local_offset + cnt] = uvec2(tile_id, screen_splats[idx].depth);
+                keys[sGlobalOffset + local_offset + cnt] = uvec2(tile_id, screen_splats[idx].depth);
                 cnt += 1;
             }
         }
