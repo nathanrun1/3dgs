@@ -104,7 +104,6 @@ namespace Renderer {
         }
     }
 
-
     void _frame_buffer_size_callback(GLFWwindow* _, const int width, const int height) {
         glViewport(0, 0, width, height);
     }
@@ -260,8 +259,7 @@ namespace Renderer {
         
 
         // Init buffers for splat sorting and tile-based logic
-        g_num_tiles = num_tiles(TILE_DIM, GLFW::get_window_width(), GLFW::get_window_height());
-        g_num_tile_scan_blocks = (g_num_tiles + TILE_SCAN_BLOCK_SIZE - 1) / TILE_SCAN_BLOCK_SIZE;
+
 
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysA_SSBO);  // Input keys
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_keysB_SSBO);
@@ -271,8 +269,6 @@ namespace Renderer {
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tilehist_SSBO);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, g_tile_scan_block_sum_SSBO);
         glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, g_create_key_count);
-        glNamedBufferData(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tile_scan_blocks * TILE_SCAN_BLOCK_SIZE, nullptr, GL_DYNAMIC_DRAW);
-        glNamedBufferData(g_tile_scan_block_sum_SSBO, sizeof(glm::uint) * g_num_tile_scan_blocks, nullptr, GL_DYNAMIC_DRAW);
 
         // Debug labels
         glObjectLabel(GL_BUFFER, g_splatSSBO, -1, "splat_SSBO");
@@ -417,7 +413,7 @@ namespace Renderer {
         // Upsweeps until current level fits in single up/down
         use_program("upsweep");
         while (g_histogram_size / stride > SPLAT_TOP_SCAN_BLOCK_SIZE) {
-            std::cout << "upsweep pass, stride: " << stride << std::endl;
+            //std::cout << "upsweep pass, stride: " << stride << std::endl;
             g_active_program->set_uint("uBaseStride", stride);
             glDispatchCompute(g_histogram_size / (stride * SPLAT_SCAN_BLOCK_SIZE), 1, 1);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -427,7 +423,7 @@ namespace Renderer {
         // Top-level upsweep & downsweep
         use_program("top");
         g_active_program->set_uint("uBaseStride", stride);
-        std::cout << "top pass, stride: " << stride << std::endl;
+        //std::cout << "top pass, stride: " << stride << std::endl;
         glDispatchCompute(1, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         
@@ -436,7 +432,7 @@ namespace Renderer {
         // Downsweeps until scan complete
         use_program("downsweep");
         while (stride > 0) {
-            std::cout << "downsweep pass, stride: " << stride << std::endl;
+            //std::cout << "downsweep pass, stride: " << stride << std::endl;
             g_active_program->set_uint("uBaseStride", stride);
             glDispatchCompute(g_histogram_size / (stride * SPLAT_SCAN_BLOCK_SIZE), 1, 1);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -446,12 +442,12 @@ namespace Renderer {
     
     /** Radix sorts all splats using the GPU, must be invoked before rendering pass */
     void _sort_splats() {
-        std::cout << "key buffer size: " << g_key_buffer_size << std::endl;
-        std::cout << "histogram size: " << g_histogram_size << std::endl;
-        std::cout << "num blocks: " << g_num_key_blocks << std::endl;
+        //std::cout << "key buffer size: " << g_key_buffer_size << std::endl;
+        //std::cout << "histogram size: " << g_histogram_size << std::endl;
+        //std::cout << "num blocks: " << g_num_key_blocks << std::endl;
 
         for (int i = 0; i < SPLAT_SORT_DIGITS_PER_KEY; ++i) {
-            std::cout << "digit id: " << i << std::endl;
+            //std::cout << "digit id: " << i << std::endl;
 
             // Swap key/value buffers (3/5 in, 4/6 out)
             bool A_in = i % 2 == 0;
@@ -469,7 +465,7 @@ namespace Renderer {
             use_program("build_histogram");
             g_active_program->set_uint("uNumBlocks", g_num_key_blocks);
             g_active_program->set_uint("uDigitId", i);
-            std::cout << "histogram pass" << std::endl;
+            //std::cout << "histogram pass" << std::endl;
             glDispatchCompute(g_num_key_blocks, 1, 1);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -479,7 +475,7 @@ namespace Renderer {
             use_program("local_sort");
             g_active_program->set_uint("uNumBlocks", g_num_key_blocks);
             g_active_program->set_uint("uDigitId", i);
-            std::cout << "local sort pass" << std::endl;
+            //std::cout << "local sort pass" << std::endl;
             glDispatchCompute(g_num_key_blocks, 1, 1);
             glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         }
@@ -487,8 +483,13 @@ namespace Renderer {
     }
 
     void draw_splats() {
+        g_num_tiles = num_tiles(TILE_DIM, GLFW::get_window_width(), GLFW::get_window_height());
+        g_num_tile_scan_blocks = (g_num_tiles + TILE_SCAN_BLOCK_SIZE - 1) / TILE_SCAN_BLOCK_SIZE;
         const int WG_SIZE = 256;
         const glm::uint ZERO = 0;
+
+        std::cout << "Num tiles: " << g_num_tiles << std::endl;
+        std::cout << "Num splats: " << g_num_splats << std::endl;
 
         // TESTING:
         // ImGui::Begin("Splats");
@@ -511,12 +512,12 @@ namespace Renderer {
         g_active_program->set_vec2("uTanFov", main_camera.tan_fov());
         g_active_program->set_uvec2("uResolution", glm::uvec2(GLFW::get_window_width(), GLFW::get_window_height()));
 
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, g_splat_INDB);
-        glBufferSubData(GL_DRAW_INDIRECT_BUFFER, offsetof(SSBDrawArraysIndirectCommand, instance_count), sizeof(glm::uint), &ZERO);
         glClearNamedBufferData(g_tilehist_SSBO, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &ZERO);
+        glNamedBufferData(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tile_scan_blocks * TILE_SCAN_BLOCK_SIZE, nullptr, GL_DYNAMIC_DRAW);
+        glNamedBufferData(g_tile_scan_block_sum_SSBO, sizeof(glm::uint) * g_num_tile_scan_blocks, nullptr, GL_DYNAMIC_DRAW);
         glDispatchCompute((g_num_splats + WG_SIZE - 1) / WG_SIZE, 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
 
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, g_tile_scan_block_sum_SSBO);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_tilehist_SSBO);
         use_program("hillis_scan");
@@ -527,9 +528,9 @@ namespace Renderer {
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         use_program("scatter");
         glDispatchCompute(g_num_tile_scan_blocks, 1, 1);
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
         // Read back key count (last element in prefix-scanned histogram)
+        glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
         void* num_keys_ptr = glMapNamedBufferRange(g_tilehist_SSBO, sizeof(glm::uint) * g_num_tiles - 1, sizeof(glm::uint), GL_MAP_READ_BIT);
         std::memcpy(&g_key_buffer_size, num_keys_ptr, sizeof(glm::uint));
         glUnmapNamedBuffer(g_tilehist_SSBO);
@@ -553,6 +554,7 @@ namespace Renderer {
         glNamedBufferData(g_create_key_count, sizeof(glm::uint), &ZERO, GL_DYNAMIC_DRAW);
 
         // Create tile-based depth-sort keys
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
         glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 1, g_create_key_count);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, g_keysA_SSBO);
         use_program("create_keys");
@@ -570,7 +572,7 @@ namespace Renderer {
         g_active_program->set_vec3("uBackgroundColor", main_camera.get_background_color());
 
         glBindVertexArray(g_emptyVAO);
-        glDrawArraysIndirect(GL_TRIANGLE_STRIP, (void*)0);
+        glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, g_num_tiles);
     }
 
     void add_program(const std::string& program_id, const ShaderProgram& program) {

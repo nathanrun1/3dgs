@@ -21,12 +21,12 @@ layout (std430, binding = 1) readonly buffer InputSplats {
     Splat splats[];
 };
 
-layout (std430, binding = 2) buffer DrawArraysIndirectCommand {
-    uint count;
-    uint instanceCount;
-    uint first;
-    uint baseInstance;
-} draw_args;
+//layout (std430, binding = 2) writeonly buffer DrawArraysIndirectCommand {
+//    uint count;
+//    uint instanceCount;
+//    uint first;
+//    uint baseInstance;
+//} draw_args;
 
 layout (std430, binding = 3) buffer TileHistogram {
     uint tile_histogram[];
@@ -75,9 +75,9 @@ void main() {
     uint idx = gl_GlobalInvocationID.x;
     if (idx >= uNumSplats) return;
 
-    if (idx == 0) {
-        draw_args.instanceCount = tile_count(uResolution);  // One instance per tile
-    }
+//    if (idx == 0) {
+//        draw_args.instanceCount = tile_count(uResolution);  // One instance per tile
+//    }
 
     vec3 view_pos = (uView * vec4(splats[idx].position, 1.0)).xyz;
     if (view_pos.z > 0.1) return;

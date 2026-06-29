@@ -84,7 +84,7 @@ namespace Renderer {
         alignas(4)  glm::uint depth;
     };
 
-    struct alignas(4) SSBDrawArraysIndirectCommand {
+    struct alignas(16) SSBDrawArraysIndirectCommand {
         alignas(4) glm::uint count;
         alignas(4) glm::uint instance_count;
         alignas(4) glm::uint first;
